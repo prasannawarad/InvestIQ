@@ -12,15 +12,15 @@ If something here conflicts with code in the repo, this document wins — update
 
 InvestIQ is a portfolio management web app for beginner investors. The target user has money in stocks or mutual funds but is intimidated by traditional brokerage UIs and doesn't understand financial jargon. The product helps them track investments, understand risk, and rebalance during market uncertainty — all without dumping Bloomberg-style data on them.
 
-The AI agent inside the app is named **Kuber** (from Hindu tradition — the deity of wealth). Kuber appears throughout the product: as a floating widget on every page, as a dedicated page (/Kuber), and as a Chrome extension overlay on third-party sites.
+The AI agent inside the app is named **Kuber** (from Hindu tradition — the deity of wealth). Kuber appears in three places: as the discovery agent on `/Kuber`, as a floating chat widget on most other pages, and as a Chrome extension overlay on third-party sites.
 
 ### 1.2 Demo persona
 
 Priya Sharma. 38. Schoolteacher in Pune. Two dependents. $22,300 invested. Two goals: house deposit (3 years), retirement (26 years). Risk profile: balanced. Cautious by temperament.
 
-Currency for the demo is **USD** despite the Indian persona. Rationale: the cultural anchor of "Kuber" stays, but the dollars are easier for Dallas judges to grok.
+Currency for the demo is **USD** despite the Indian persona. The "Kuber" name keeps the cultural anchor; dollars are easier for Dallas judges.
 
-### 1.3 Hackathon rubric (what we're scored on)
+### 1.3 Hackathon rubric
 
 | Weight | Criterion | How we win it |
 |---|---|---|
@@ -31,92 +31,121 @@ Currency for the demo is **USD** despite the Indian persona. Rationale: the cult
 
 ### 1.4 The three-day demo narrative
 
-The demo is three vignettes from Priya's life. See `DEMO.md` for the script. Every feature decision should be filtered through "does this serve the demo script?"
+The demo tells three vignettes from Priya's life. See `DEMO.md` for the script. Every feature decision should be filtered through "does this serve the demo script?"
 
-- **Day 1** — Priya reads CNBC, the Chrome extension overlays Kuber, Kuber connects the news to her bond fund holding, tells her to do nothing.
-- **Day 2** — Priya checks the app, navigates /home → /current → a holding detail, asks Kuber about jargon, learns about fees compounded over 26 years.
-- **Day 3** — Priya panics about a market drop, taps "I'm freaking out," runs the "market drops 20%" scenario via /rebalance, Kuber narrates, she confirms two trades.
+- **Day 1** — Priya reads a CNBC article. The Chrome extension overlays Kuber. Kuber connects the news to her bond fund, tells her to do nothing.
+- **Day 2** — Priya checks the app. /home → /current → a holding detail. She asks Kuber (via the floating widget) about jargon, learns about fees compounded over 26 years.
+- **Day 3** — Priya panics about a market drop. Taps "I'm freaking out." Runs the "market drops 20%" scenario via /rebalance. Kuber narrates. She confirms two trades.
 
 ---
 
-## 2. Information architecture
+## 2. Architecture overview
 
-### 2.1 Routes
+### 2.1 Three Kuber surfaces — each does ONE job
 
-| Route | Description | In nav? | Owner |
+The agent's surfaces have non-overlapping responsibilities. Don't blur them.
+
+| Surface | Job | Layout |
+|---|---|---|
+| `/Kuber` page | **Discovery** — find new investments | Jobright-style: status banner top, filters drawer, top-matches grid, running tally |
+| Floating widget | **Quick chat** — Q&A, jargon, "am I at risk?" | Small chat panel bottom-right, common-question chips above input |
+| Chrome extension overlay | **Contextual chat** — questions about the page being read | Small chat panel that injects into third-party pages, with "Open in app →" CTA |
+
+`/Kuber` has NO chat panel. Chat lives in the widget and extension. This separation is deliberate — don't add a chat panel to /Kuber later.
+
+### 2.2 Top-level routes
+
+| Route | Description | In nav | Owner |
 |---|---|---|---|
-| `/home` | Dashboard — hero, three numbers, journey chart, ask-Kuber chips, "what you should know today," holdings preview | Yes | Person 1 |
+| `/home` | Dashboard — hero sentence, three numbers, journey chart, ask-Kuber chips, "what you should know today," holdings preview | Yes | Person 1 |
 | `/current` | Grid of all holdings with fit scores | Yes | Person 1 |
-| `/current/[symbol]` | Single holding detail with "How this fits your portfolio" panel and jargon translations | No (deep-linked) | Person 1 |
-| `/preview/[symbol]` | Preview a holding the user does NOT own. Match score + why-fits / why-not-fits | No (deep-linked from /Kuber discovery) | Person 1 |
-| `/Kuber` | Conversational agent. Chat mode (default) handles Q&A, jargon, common questions | Yes | Person 2 |
-| `/Kuber/discover` | Discovery mode — filters left, top-matches grid center, running tally right. Wireframe layout | No (deep-linked from /Kuber chip "Find new investments") | Person 2 |
-| `/rebalance` | The decision-and-commit surface. Drift-driven by default. Accepts `?source=panic` and `?source=scenario&name=...` | Yes | Person 3 (page) + Person 2 (narration) |
-| `/panic` | Calm full-page takeover after "I'm freaking out" | No (linked from button) | Person 4 |
-| `/settings` | User preferences (tone, frequency, risk slider). Renamed from "Preferences" | Yes | Person 1 |
+| `/Kuber` | Discovery agent — filters → matches → add → confirm | Yes | Person 2 |
+| `/rebalance` | Decision/commit surface — drift, scenario, panic modes | Yes | Person 3 |
+| `/settings` | User preferences | Yes | Person 1 |
 | `/profile` | User identity and goals | Yes | Person 1 |
 | `/extension` | Static page explaining the Chrome extension | Secondary nav | Person 4 |
-| `/help` | Glossary of jargon + FAQ | Secondary nav | Person 1 |
+| `/help` | Glossary + FAQ | Secondary nav | Person 1 |
 
-### 2.2 Navigation
+### 2.3 Sub-routes / deep-linked pages
+
+| Route | Description | Reached from |
+|---|---|---|
+| `/current/[symbol]` | Single holding detail with "How this fits your portfolio" panel | Tap card on /current |
+| `/preview/[symbol]` | Preview a holding the user does NOT own. Match score, why-fits / why-not-fits | From /Kuber match card name (not the +Add button) |
+| `/rebalance?source=panic` | Rebalance with conservative bias | "I want to do something protective" on /panic |
+| `/rebalance?source=scenario&name=market-drop-20` | Rebalance after running a what-if | Scenario picker on /rebalance, or floating widget redirect |
+| `/panic` | Calm full-page takeover | "I'm freaking out" button (visible on /home and the floating widget) |
+
+### 2.4 Navigation structure
 
 **Left rail**, 240px wide, full height, white background with subtle right border.
 
-Top section:
-- InvestIQ wordmark + IQ logo
-- Home
-- Current
-- Kuber
-- Rebalance ⭐ (NEW — top-level)
-- Settings
-- Profile
-
-Divider.
-
-Secondary section:
-- Extension
-- Help
-
-Bottom section:
-- Avatar + user name + sign out
+```
+┌─────────────────┐
+│ IQ  InvestIQ    │
+├─────────────────┤
+│ 🏠 Home         │
+│ 📊 Current      │
+│ 💬 Kuber        │
+│ ⚖️  Rebalance   │
+│ ⚙️  Settings    │
+│ 👤 Profile      │
+├─────────────────┤
+│ 🧩 Extension    │
+│ ❓ Help          │
+├─────────────────┤
+│ [Avatar]        │
+│ Priya Sharma    │
+│ Sign out        │
+└─────────────────┘
+```
 
 Active link: muted teal text + thin teal vertical bar on left edge.
 
-**Floating Kuber widget**, bottom-right, on every page EXCEPT /Kuber, /rebalance, and /panic.
+**Floating Kuber widget**, bottom-right, on every page EXCEPT `/Kuber`, `/rebalance`, and `/panic`.
 
 - Closed: 56x56px circular button, muted teal, white "K", soft drop shadow, 5s pulse
 - Open: 380x500px chat panel anchored bottom-right with 24px margin
-- Header: Kuber name + listening indicator + close X
-- Body: 3 quick-action chips above the conversation, then the conversation
-- Footer: voice/text input + small "Open full Kuber →" link
+- Header: "Kuber" + listening indicator + close X
+- **Empty state body:** small "Hi Priya. What can I help with?" greeting, then categorized chip groups:
+  - *Scenarios:* "What if markets drop 20%?", "What if I need $5,000 soon?", "What if inflation stays high?"
+  - *Quick questions:* "Am I at risk?", "What should I know today?", "Why did my portfolio drop?"
+  - *Jargon:* "Explain P/E ratio", "What's an expense ratio?"
+- Once conversation starts, chips hide and conversation fills the body
+- Footer: voice/text input (mic left, text middle, send right), small "Open full Kuber →" link bottom-left
+- **Routing rule:** if the user message implies a scenario or rebalance ("what if markets drop", "should I rebalance", "am I too risky in stocks"), the widget acknowledges with one short sentence ("Let me run that — opening Rebalance...") and the page navigates to `/rebalance` with appropriate query params
 
-### 2.3 Page details
+---
 
-#### /home
+## 3. Page specs
+
+### 3.1 /home
 
 Vertical order from top:
-1. Hero block: large serif sentence ("Your portfolio is healthy.") with a small icon (sun for healthy, cloud for caution, storm for "needs attention"). Below the hero, on the right rail: "I'm freaking out" coral button + "Run a scenario" teal outline button.
-2. Three stat cards in a row: Total Value (e.g. $22,300), Today's Change (e.g. -$12, MUTED gray, not red, since 0.05% is noise), Health Score (e.g. "Good" with green check).
-3. Journey chart: line chart of portfolio value over 1Y by default, with annotations for milestones ("Started," "Added $500," "Market dip"). Time toggle pills above (1M / 3M / YTD / 1Y / All).
-4. "Ask Kuber" section: 4 chip buttons — "Am I at risk?", "What should I know today?", "Why did my portfolio drop?", "Should I worry about the news?" Each chip pre-fills /Kuber with that question.
-5. "What you should know today": 2 cards. Headline + plain summary + "What this means for you" connector sentence tied to her specific holdings.
-6. "Your holdings": top 3 holding cards horizontally. Friendly name, dollar value, "21% of portfolio" line, fit score badge. "See all →" link to /current.
 
-#### /current
+1. **Hero block.** Large serif sentence ("Your portfolio is healthy.") with a small icon (sun for healthy, cloud for caution, storm for "needs attention"). Right rail: "I'm freaking out" coral button + "Run a scenario" teal outline button (links to /rebalance).
+2. **Three stat cards.** Total Value, Today's Change (in MUTED gray for small moves like 0.05%; only red for >2% drops), Health Score with a one-word verdict.
+3. **Journey chart.** Line chart of portfolio value over 1Y default, with milestone annotations ("Started," "Added $500," "Market dip"). Time toggle pills: 1M / 3M / YTD / 1Y / All.
+4. **Ask Kuber chips.** 4 chips that open the floating widget pre-filled: "Am I at risk?", "What should I know today?", "Why did my portfolio drop?", "Should I worry about the news?"
+5. **What you should know today.** 2 cards. Headline + plain summary + "What this means for you" connector sentence tied to her holdings.
+6. **Your holdings.** Top 3 cards horizontally. Friendly name, dollar value, "X% of portfolio" line, fit score badge. "See all →" link to /current.
+7. **Looking to invest more?** Small text link below holdings → /Kuber.
+
+### 3.2 /current
 
 Top: filter pills (All, Stocks, Funds, Bonds, Gold).
 
-Grid of holding cards (3-column on desktop, 1-column on mobile). Each card:
+Grid of holding cards (3-column desktop, 1-column mobile). Each card:
 - Small logo or letter avatar
 - Friendly name + plain-language size label ("Big established company" not "Mid cap")
 - Location (country)
-- Fit score badge — green ≥80, amber 60-79, coral <60
+- Fit score badge — green ≥80, amber 60–79, coral <60
 - Dollar value + "X% of portfolio" small text
-- "Ask Kuber" link
+- "Ask Kuber" link (opens floating widget pre-filled with "tell me about [name]")
 
 Cards with fit < 80 get an amber border. Tap card → /current/[symbol].
 
-#### /current/[symbol]
+### 3.3 /current/[symbol]
 
 - Header: logo, name, size label, "Bought N months ago" badge
 - Right card: fit score with "Why this fits you" expandable list
@@ -125,98 +154,168 @@ Cards with fit < 80 get an amber border. Tap card → /current/[symbol].
   - Cost basis ("Bought at $1,450 avg, up 11.7%")
   - Tax context ("Selling now would create $85 in long-term gains")
   - Goal connection ("30% earmarked for retirement; selling sets timeline back ~2 months")
-- "Bulls say / Bears say" two-column plain-language cards (NO sell-side analyst quotes)
-- Jargon stats row: P/E ratio, Market cap, Dividend yield, Beta — each with (i) icon → click opens popover with plain-language explanation + "Ask Kuber more" button
+- "Bulls say / Bears say" two-column plain-language cards (NO sell-side analyst quotes — write them ourselves)
+- Jargon stats row: P/E ratio, Market cap, Dividend yield, Beta — each with (i) icon → click opens popover with plain-language explanation + "Ask Kuber more" button (opens widget)
 - "Ask Kuber about [symbol]" CTA at bottom
 
-#### /Kuber — Chat mode (default)
+### 3.4 /Kuber — Discovery agent ⭐
 
-Single-column layout, ChatGPT-like.
+This page IS the discovery surface. No chat. Modeled on Jobright's discovery UI.
 
-- Top: small "Kuber" header with listening indicator (pulses on speak/listen)
-- Center: chat conversation area
-- **Common questions live above the input box**, categorized into three groups:
-  - *Scenarios:* "What if markets drop 20%?", "What if I need $5,000 soon?", "What if inflation stays high?"
-  - *Find investments:* "Show me safe stocks", "What about gold?"
-  - *Rebalance:* "Am I too risky?", "Should I diversify more?"
-- Chips disappear once the conversation starts; reappear if the user clears the chat
-- Footer: voice/text input bar with mic icon
+**Layout** (full-width content area to the right of the global left nav):
 
-**Routing rule:** When Kuber receives a quantitative question (scenarios, rebalancing, projections, "should I sell?"), Kuber responds with a short verbal acknowledgment ("Let me run that for you — opening Rebalance...") and the app navigates to /rebalance with the appropriate `?source=` and `?name=` query params. Kuber does NOT compute or display rebalance recommendations in the chat panel itself.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  [Status banner: Standby / Running]  [Filters icon]  [Settings] │
+├──────────────────────────────────┬──────────────────────────────┤
+│                                  │                              │
+│  Welcome message                 │  Top Matches                 │
+│  + brief instructions            │  (empty until Start clicked) │
+│                                  │                              │
+│  [List of selected holdings      │  ┌────────────────────────┐  │
+│   appears here once user adds]   │  │ Logo  Company Name   84%│ │
+│                                  │  │ Industry · Size · Loc   │ │
+│                                  │  │ [Why this match ▾]      │ │
+│                                  │  │              [+ Add]    │ │
+│                                  │  └────────────────────────┘  │
+│                                  │  ...more cards...            │
+│                                  │                              │
+└──────────────────────────────────┴──────────────────────────────┘
+```
 
-When Kuber receives an investment-discovery question ("help me find new investments", "I want to invest $500"), Kuber acknowledges and navigates to /Kuber/discover.
+#### 3.4.1 Status banner (top)
 
-#### /Kuber/discover — Discovery mode
+States:
 
-Layout matches the hand-drawn wireframe (Jobright-style discovery surface).
+- **Standby** (initial): "Standby · Configure your filters to start" with "Start" button (disabled until filters are valid)
+- **Running** (after Start): "X holdings being added · $Y of $Z used · $W left" with running totals updating live as the user adds holdings
 
-- **Top tally bar:** "X holdings being added · awaiting confirm · $Y left of $Z"
-- **Left filter sidebar:** industry, company size (small / medium / big), max single-position amount, tech keywords. Apply button.
-- **Center:** "Top matches" grid, 4–6 cards. Each card has logo, name + size + location, match % badge, expandable "Why this match," and an "+Add $___" input + button. Tapping a card name (not the +Add button) opens /preview/[symbol].
-- **Right (after first add):** running list of holdings being added with thumbnails, total committed, "Review & confirm" button at bottom
+The banner is sticky at the top of the content area.
 
-**Reached from:** /Kuber chat ("Find new investments" chip or any matching question)
+#### 3.4.2 Filter drawer
 
-**On "Review & confirm":** popup with pie chart of new allocation, industry breakdown, "where you might want to diversify next" hint, then Confirm → commits to the portfolio fixture, redirects to /home.
+Opens from a "Filters" icon button on the right of the status banner. Slides in from the right as a drawer (Jobright-style). Width: ~400px. Sections:
 
-#### /rebalance — The decision-and-commit surface ⭐
+1. **Money to invest** *(required)* — single $ input. Total budget for this session. Validation: must be > $0.
+2. **Per-position cap** *(optional)* — max $ in any single holding. Default: 25% of budget. Slider or input.
+3. **Industry / Sector** — multi-select chips: Tech, Finance, Healthcare, Energy, Consumer, Real Estate, Industrials.
+4. **Company size** — multi-select: Big established / Medium growing / Small growing.
+5. **Risk appetite** — slider 1–5, defaulted from user's profile but overridable for this session.
+6. **Asset class mix** — checkboxes: Stocks / Funds / Bonds / Gold.
+7. **Geography** — radio: Domestic only / Include international.
+8. **Keywords** — chip input. User types keywords (e.g. "AI", "renewable", "dividend"); each becomes a tag.
 
-This is the centerpiece feature. 30% of the rubric points live here.
+Footer of drawer: "Cancel" link + "Apply & Start" teal button. Apply triggers the match generation and switches the banner from Standby to Running.
+
+#### 3.4.3 Top Matches grid (right)
+
+Shows 6–10 match cards after Start is clicked. Each card:
+
+- Logo + company/fund name
+- Industry · size · location (small text)
+- Match % badge (large, top-right corner). Green ≥80, amber 60–79.
+- Expandable "Why this match" — bullet list of 3–4 reasons in plain English (e.g. "Big established tech company", "Matches your interest in stable companies", "Would bring tech exposure from 12% to 14%")
+- **+Add button** — clicking opens an "Add holding" popup (NOT inline input)
+
+Tapping the card name (anywhere except the +Add button) opens `/preview/[symbol]`.
+
+#### 3.4.4 Add holding popup
+
+Triggered by clicking +Add on a match card. Modal with:
+
+- Card header: "Add [Company Name] to your basket"
+- Slider for amount, range $0 to (per-position cap or budget remaining, whichever is smaller). Default: 10% of remaining budget.
+- Below slider: text showing current allocation impact: "Adding $200 brings tech from 12% to 13.4%"
+- Cancel + "Add to basket" teal button. On Add: holding goes into the running list on the left, banner totals update, popup closes.
+
+#### 3.4.5 Running list (left)
+
+Once user adds the first holding, the welcome message is replaced by:
+
+- "Holdings in your basket" header
+- Each added holding as a small card: logo, name, $ amount, small × button to remove
+- Total at bottom: "$X committed of $Y budget"
+- **Review & Confirm** big teal button (sticky at the bottom)
+
+#### 3.4.6 Review & Confirm popup
+
+Triggered by clicking "Review & Confirm." Modal with:
+
+1. Pie chart of new TOTAL portfolio allocation (existing holdings + the new ones)
+2. Industry breakdown of money being added: "70% Tech, 20% Healthcare, 10% Energy"
+3. "Where you might want to diversify next" hint — looks at gaps in the new allocation (e.g. "You're light on bonds. Consider adding 10% to your debt allocation next month.")
+4. Confirm + Cancel buttons
+
+On Confirm: commits all basket holdings to the in-memory portfolio (React state, not the JSON file), redirects to /home with hero updated. On Cancel: returns to /Kuber with basket intact.
+
+### 3.5 /rebalance — The decision-and-commit surface ⭐
+
+The centerpiece feature. 30% of the rubric points live here.
 
 Single page, vertically stacked sections.
 
-**Section 1 — Mode picker (top)**
+#### Section 1 — Mode picker (top)
 
-Three mode chips at top:
+Three mode chips horizontally:
 - **Drift (default)** — auto-loads when entering /rebalance with no query params. Engine reads current vs. target allocation; if drift > 5pp on any class, generates trades.
-- **Scenario** — picker dropdown of scenarios:
+- **Scenario** — chip with dropdown of scenarios:
   - "What if markets drop 20%?" (`market-drop-20`)
   - "What if markets drop 30%?" (`market-drop-30`)
   - "What if I need money in a year?" (`withdraw-20-percent`)
   - "What if inflation stays high?" (`inflation-stays-high`)
   - "What if I lose my job?" (`lose-job-need-emergency`)
-- **Panic** — activated by `?source=panic`. Engine biases toward more conservative trades, smaller moves.
+- **Panic** — only highlighted when `?source=panic`. Engine biases toward more conservative trades, smaller moves.
 
-URL query params control mode:
+URL query params:
 - `/rebalance` → drift mode
 - `/rebalance?source=panic` → panic mode
-- `/rebalance?source=scenario&name=market-drop-20` → scenario mode with that scenario pre-loaded
+- `/rebalance?source=scenario&name=market-drop-20` → scenario mode pre-loaded
 
-**Section 2 — Kuber narration (~1/3 of viewport)**
+#### Section 2 — Kuber narration (~1/3 of viewport)
 
-Voice + text panel where Kuber explains what's happening and why. Streams from the Kuber narrator (`narrate()` in `@investiq/kuber`).
+Voice + text panel. Streams from `narrate()` in `@investiq/kuber`.
 
 Examples:
 - *Drift:* "You're 65% in stocks but your target is 60%. Want me to rebalance?"
-- *Scenario market-drop-20:* "If markets drop 20%, your portfolio goes from $22,300 to $19,500. Here's how to soften the blow."
+- *Scenario market-drop-20:* "If markets drop 20% from here, your portfolio goes from $22,300 to $19,500. Here's how to soften the blow."
 - *Panic:* "Markets are jumpy. Let's bring you a bit closer to your target so a drop hurts less."
 
-**Section 3 — Receipt (~2/3 of viewport)**
+#### Section 3 — Receipt (~2/3 of viewport)
 
 The transparent receipt:
 - Title: "Recommended changes"
-- Before/after donut charts side-by-side
-- Trade cards: each shows action ("Sell $50 of X" or "Buy $50 of Y") with an expandable "Why this trade" section
+- Before/After donut charts side-by-side
+- Trade cards with expandable "Why this trade"
 - Cost line items: "Tax cost: $0", "Trade fees: $0"
 - Goal impact line items, one per goal: "House deposit goal: improves by 1 month", "Retirement goal: unchanged"
-- Confirm + Cancel buttons at bottom
+- Confirm + Cancel buttons
 
 **On Confirm:**
-- Animate the trades applying
-- Update the in-memory portfolio (React state, not the JSON file)
-- Redirect to /home with the hero sentence updated to reflect the post-rebalance state
+- Animate trades applying
+- Update in-memory portfolio (React state)
+- Redirect to /home with updated hero sentence
 
-**Reached from:**
-- Top-level nav (Rebalance link)
-- /home "Run a scenario" button
-- /panic "Run a scenario" or "I want to do something protective"
-- /Kuber chat redirect when user asks a quantitative question
-- The floating Kuber widget when it detects a quantitative question
+**Reached from:** top-level nav · /home "Run a scenario" · /panic "Run a scenario" or "I want to do something protective" · floating widget redirect on quantitative questions.
 
-#### /settings
+### 3.6 /panic
 
-Single-column form, max-width 720px.
+Full-page takeover. NO left nav (just "← Back to Home" link top-left).
 
+- Cooler cream background (#F5F2EC)
+- Centered content max 600px
+- Top: soft gradient orb illustration (200px, muted teal-to-cream)
+- Hero: "Take a breath." 48px serif
+- Subhero: "Most of the time, the right thing to do is nothing." muted gray
+- Three large option cards stacked vertically:
+  1. "Show me what's actually happening" → /Kuber-style guidance (actually opens floating widget on /home with pre-filled prompt)
+  2. "Run a scenario" → /rebalance with scenario picker open
+  3. "I want to do something protective" → /rebalance?source=panic
+- No red/orange/amber colors, no exclamation marks, no urgency
+- No floating Kuber widget on this page
+
+### 3.7 /settings
+
+Single-column form, max-width 720px. Sections:
 - **Communication tone** — radio: "Friendly and simple" / "Direct and concise" / "Detailed with explanations"
 - **Notification frequency** — radio: "Daily" / "Weekly" / "Only when something matters"
 - **Risk profile** — slider 1–10 with live label ("Cautious" / "Balanced" / "Growth-focused")
@@ -225,277 +324,223 @@ Single-column form, max-width 720px.
 
 Save button at bottom. Updates in-memory user_profile, shows toast "Saved."
 
-#### /profile
+### 3.8 /profile
 
-Single-column, max-width 720px.
-
+Single-column, max-width 720px. Sections:
 - **About me** — name, age, occupation, location (read-only for demo)
 - **Financial snapshot** — annual income, monthly savings, dependents, emergency fund months (editable)
 - **Goals** — cards per goal: name, target amount, current progress (progress bar), target date, priority. "+ Add goal" button.
-- **Risk profile summary** — read-only sentence: "You're a Balanced investor with medium risk tolerance."
+- **Risk profile summary** — read-only: "You're a Balanced investor with medium risk tolerance."
 
-#### /extension
+### 3.9 /extension
 
 Static informational page.
 
 - Top: "← Back to Home" link
 - Hero: "Chrome Extension" 64px serif
 - Subhero: "Kuber follows you across the web to answer money questions in context."
-- IMPORTANT: search Figma export for any "Sage" references and replace with "Kuber" — the export was generated using a previous name
-- Demo tabs at top: "Apple.com Demo" / "CNBC Article Demo" / "Gmail Demo"
-- Below tabs: side-by-side mockups showing the third-party page (left) and the Kuber overlay open (right) with an "Open in InvestIQ app →" CTA in the chat
+- IMPORTANT: search Figma export for any "Sage" references and replace with "Kuber"
+- Demo tabs: "Apple.com Demo" / "CNBC Article Demo" / "Gmail Demo"
+- Below tabs: side-by-side mockups
 - Bottom: "Install for Chrome" button
 
-#### /help
+### 3.10 /help
 
 Single-page glossary + FAQ.
 
-- **Quick glossary** — accordion list of jargon terms with plain-language explanations. Same translations as the (i) tooltips on /current/[symbol].
+- **Quick glossary** — accordion: P/E, dividend yield, expense ratio, beta, market cap, NAV, AUM, etc. Plain-language explanations matching the (i) tooltips throughout the app.
 - **Common questions** — FAQ cards
 - **Contact us** — placeholder
 
-The (i) tooltips throughout the app have a "see full glossary →" link that targets /help.
-
-#### /panic
-
-Full-page takeover. NO left nav (just a small "← Back to Home" link top-left).
-
-- Cooler cream background (#F5F2EC) — slightly different from default to signal calm
-- Centered content max 600px
-- Top: soft gradient orb illustration (200px, muted teal-to-cream)
-- Hero: "Take a breath." 48px serif
-- Subhero: "Most of the time, the right thing to do is nothing." muted gray
-- Three large option cards stacked vertically:
-  - "Show me what's actually happening" (subtitle "I'll explain today's market in plain English") → links to /Kuber with chat mode and a "explain today's news" prompt
-  - "Run a scenario" → links to /Kuber/scenario picker
-  - "I want to do something protective" → links to /Kuber/rebalance with `source=panic`
-- No red/orange/amber colors, no exclamation marks, no urgency
-- No floating Kuber widget on this page
+The (i) tooltips have a "see full glossary →" link to /help.
 
 ---
 
-## 3. Data
+## 4. Data
 
-### 3.1 Three core fixtures
+### 4.1 Three core fixtures
 
-All data lives in `packages/data/src/fixtures/`. Loaded via `loadDemoData()` from `@investiq/data`.
+In `packages/data/src/fixtures/`. Loaded via `loadDemoData()` from `@investiq/data`.
 
 - `user_profile.json` — Priya's identity, financial context, risk profile, goals, preferences
-- `portfolio.json` — Her holdings, current values, allocation, target allocation, drift, risk metrics
+- `portfolio.json` — Holdings, current values, allocation, target allocation, drift, risk metrics
 - `market_context.json` — Today's market snapshot, macro context, recent events with `relevance_to_user` flag
 
-These are the DEMO data. Schema is the contract; if a shape changes, update Zod schemas first in `packages/data/src/schemas.ts`, then update fixtures, then notify the team.
+Schemas in `packages/data/src/schemas.ts` are the contract. Update Zod first, then fixtures, then notify team.
 
-### 3.2 Currency note
+### 4.2 Currency note
 
-Fixtures are currently labeled with `"currency": "INR"` and INR amounts. For the demo, the UI displays USD by treating the numbers as USD and changing the symbol. **This is a demo-day shortcut, not a real conversion.** Real conversion would change every number; we're just relabeling. Don't ship this to actual users.
+Fixtures show INR amounts but the UI displays USD by relabeling (not converting). Demo-day shortcut. If asked: "this is demo data; production would ingest via Plaid."
 
-If a judge asks: "this is a demo with placeholder data; for production we'd ingest real brokerage data via Plaid or similar."
+### 4.3 Key types (full Zod schemas in `packages/data/src/schemas.ts`)
 
-### 3.3 Schemas
-
-See `packages/data/src/schemas.ts` for full Zod definitions. Inferred TypeScript types are exported and used everywhere.
-
-Key exported types:
 - `UserProfile` — identity, financial_context, risk_profile, goals, preferences
 - `Portfolio` — summary, allocation, holdings, risk_metrics
 - `Holding` — symbol, name, asset_class, subcategory, sector, quantity, prices, weight
 - `MarketContext` — market_snapshot, macro_context, recent_events
-- `RebalanceRecommendation` — trades, before/after allocation, tax cost, fees, goal impacts, rationale (produced by the engine, narrated by Kuber)
+- `RebalanceRecommendation` — trades, before/after allocation, tax cost, fees, goal impacts, rationale
 - `Trade` — action (buy/sell), symbol, amount, reason
-- `GoalImpact` — goal_id, goal_name, delta_months (positive = goal pushed back)
+- `GoalImpact` — goal_id, goal_name, delta_months
+- `DiscoveryFilters` — money_to_invest, per_position_cap, industries, sizes, risk, asset_classes, geography, keywords
+- `MatchCandidate` — symbol, name, logo, industry, size, location, match_score, why_match (string array)
+- `BasketEntry` — match symbol + amount + timestamp
 
 ---
 
-## 4. Engine (deterministic math)
+## 5. Engine (deterministic math)
 
-Lives in `packages/engine`. **No LLM calls in this package, ever.** All numbers shown to judges come from here.
+In `packages/engine`. **No LLM calls.** All numbers shown to judges come from here.
 
-### 4.1 Rationale
-
-LLMs are bad at multi-step arithmetic. We compute the engine separately so:
-1. The numbers shown are correct
-2. Kuber narrates engine output but doesn't compute
-3. Tests can verify the engine without flaky LLM dependencies
-
-### 4.2 Public API (Person 3 implements)
-
-#### `simulateScenario(portfolio, scenarioName) → ScenarioResult`
-
-Apply a what-if scenario and return projected impact. Supported scenarios:
-
-| Name | Effect |
-|---|---|
-| `market-drop-20` | Equity holdings drop 20%, debt drops 5%, gold rises 8%, cash unchanged |
-| `market-drop-30` | Equity drops 30%, debt drops 8%, gold rises 12%, cash unchanged |
-| `inflation-stays-high` | Debt drops 7%, gold rises 10%, equity flat, cash flat |
-| `withdraw-20-percent` | User pulls 20% to cash; show what's left in each holding |
-| `lose-job-need-emergency` | 6 months of income ($35k) needed; show portfolio after that drawdown |
-
-Result includes: projected total value, projected allocation per asset class, per-goal timeline impact in months (positive = goal pushed back), `needs_action` flag, and a one-line `human_summary` (engine-generated; Kuber rephrases for voice).
-
-#### `recommendRebalance(portfolio, target, source) → RebalanceRecommendation`
-
-Compare current allocation to target. If drift > 5pp on any asset class, generate trades to bring it back.
-
-Source flag tells the narrator (Kuber) the context:
-- `drift` — routine "your allocation drifted, here's the fix"
-- `scenario` — "given the scenario, here's what I'd do"
-- `panic` — bias toward more conservative trades, smaller moves
-- `discover` — output trades to add new money, not move existing
-
-Returned `RebalanceRecommendation` includes the trades array, before/after allocation snapshots, tax cost, fees, per-goal impacts, and a rationale summary string.
-
-#### `computeFitScore(holding, userProfile) → number`
-
-Output: integer 0–100. Combines:
-- Holding's risk profile (derived from asset_class + sector) vs. user's risk_tolerance (40% weight)
-- Time-to-nearest-goal vs. holding volatility (30% weight)
-- Current weight vs. recommended weight for this asset class (30% weight)
-
-UI thresholds: green ≥80, amber 60–79, coral <60.
-
-#### `computeGoalImpact(portfolio, trades, goals) → GoalImpact[]`
-
-Given a portfolio and proposed trades, project forward to each goal's target date and report how many months earlier or later the goal is reached vs. doing nothing.
-
-Use a simple expected-return model:
-- Equity: 8%/yr
-- Debt: 6%/yr
-- Gold: 4%/yr
-- Cash: 1%/yr
-
-Document the assumption in the rationale string. No Monte Carlo, no fancy models.
-
-### 4.3 Out of scope
-
-- Tax-lot accounting (use flat 10% LTCG estimate for sells of holdings older than 1 year, 0 for newer; document this assumption)
-- Real transaction fees (always $0 for the demo, make it clear in the receipt)
-- International tax / regulations
-- Real Monte Carlo simulation (use point estimates)
-
-### 4.4 Testing
-
-At least one test per public function before integration. Place tests in `src/*.test.ts`. Pure functions — no mocks needed.
-
----
-
-## 5. Kuber (the agent)
-
-Lives in `packages/kuber`. Owned by Person 2.
-
-### 5.1 LLM provider
-
-**Groq** with model `llama-3.3-70b-versatile`. OpenAI-compatible API at `https://api.groq.com/openai/v1/chat/completions`. Env var: `GROQ_API_KEY`.
-
-### 5.2 Voice
-
-- **STT:** Browser Web Speech API. Lives in `apps/web` and `apps/extension`, NOT in this package.
-- **TTS:** ElevenLabs streaming. Voice **Daniel** (calm, trusted-advisor energy). Model `eleven_turbo_v2_5` for lowest latency. Env vars: `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID`.
-
-Latency budget: end of user speech → first audio plays back: under 2 seconds. Achieved by streaming Groq output sentence-by-sentence into ElevenLabs as it generates.
-
-### 5.3 System prompt
-
-Locked in `packages/kuber/src/prompts/index.ts` as `KUBER_SYSTEM_PROMPT`. Key rules:
-
-1. **Never compute numbers.** Engine produces them, Kuber narrates.
-2. **Three-layer jargon answers**: human meaning, what it tells you, what it means for THIS user (tied to their portfolio).
-3. **Connect macro events to specific holdings** the user owns.
-4. **Default to "do nothing"** when that's correct. Beginners panic and overtrade.
-5. **No specific stock recommendations** outside engine output.
-
-### 5.4 Public API (Person 2 implements)
+### 5.1 Public API
 
 ```ts
-chat(messages, context) → AsyncIterable<string>
-narrate(recommendation, context) → AsyncIterable<string>
-explainJargon(term, context) → AsyncIterable<string>
-speak(text) → ReadableStream<Uint8Array>
+simulateScenario(portfolio, scenarioName) → ScenarioResult
+recommendRebalance(portfolio, target, source) → RebalanceRecommendation
+computeFitScore(holding, userProfile) → number
+computeGoalImpact(portfolio, trades, goals) → GoalImpact[]
+generateMatches(filters, userProfile, portfolio) → MatchCandidate[]   // NEW for /Kuber discovery
 ```
 
-Streaming generators yield text tokens as Groq emits them. The web app's `/api/kuber/chat` route wraps these into Server-Sent Events for the client.
+### 5.2 generateMatches — the discovery engine
 
-### 5.5 Demo-mode hardcoding
+Given the user's filters and existing portfolio, produce 6–10 ranked match candidates from a hardcoded universe of ~40 fictional companies (we'll define them in `packages/engine/src/universe.ts`). Each candidate gets a match_score 0–100 based on:
 
-For the live demo, the four chip questions on /home and the three scenario picks have **hardcoded responses** as fallback. If Groq is slow or fails, the demo flows from the hardcoded path. Document which questions are hardcoded vs. live-generated in `packages/kuber/src/demo-responses.ts`.
+- Industry overlap with filter chips (30%)
+- Size match with filter (20%)
+- Risk match with user's adjusted risk preference (20%)
+- Diversification benefit (does it fill a gap in the current portfolio?) (20%)
+- Keyword match (10%)
 
----
+Output sorted by match_score desc.
 
-## 6. Web app (`apps/web`)
+The universe is fictional but plausible — names like "TechFin Holdings", "Bharat Energy Ltd", etc. We don't pretend to recommend real stocks for legal reasons.
 
-### 6.1 Stack
+### 5.3 Other functions
 
-- Next.js 16 App Router
-- TypeScript strict mode
-- Tailwind CSS
-- shadcn/ui components (added on demand via `pnpm dlx shadcn@latest add ...`)
-- Recharts for the journey chart
-- Clerk for auth
-- Workspace dependencies: `@investiq/ui`, `@investiq/data`, `@investiq/engine`, `@investiq/kuber`
+- **simulateScenario**: 5 scenarios. `market-drop-20` is the demo scenario; must be airtight.
+- **recommendRebalance**: drift / scenario / panic / discover sources.
+- **computeFitScore**: 0–100. Green ≥80, amber 60–79, coral <60.
+- **computeGoalImpact**: simple expected-return model — equity 8%, debt 6%, gold 4%, cash 1%.
 
-### 6.2 API routes
+### 5.4 Out of scope
 
-| Route | Method | Purpose |
-|---|---|---|
-| `/api/kuber/chat` | POST (SSE) | Streaming chat with Kuber. Body: `{ messages, mode }`. Reads fixtures server-side, calls `chat()` from kuber package |
-| `/api/kuber/narrate` | POST (SSE) | Stream narration of a rebalance recommendation. Body: `{ recommendation }` |
-| `/api/kuber/jargon` | POST (SSE) | Stream a jargon explanation. Body: `{ term }` |
-| `/api/kuber/speak` | POST | Pipe text through ElevenLabs, return audio stream |
-| `/api/engine/scenario` | POST | Run a scenario. Body: `{ scenarioName }`. Returns ScenarioResult |
-| `/api/engine/rebalance` | POST | Generate a rebalance recommendation. Body: `{ source, scenarioName? }`. Returns RebalanceRecommendation |
-| `/api/engine/rebalance` | POST | Generate a rebalance recommendation. Body: `{ source }`. Returns RebalanceRecommendation |
-| `/api/portfolio` | GET | Current portfolio state (just reads the fixture for demo) |
-
-For the hackathon, all routes read fixtures from `@investiq/data` server-side. No DB.
-
-### 6.3 Auth
-
-Clerk with one preloaded demo user (Priya) credentials documented in the team Slack. Anyone can also sign up; new accounts land on an empty state with a "Welcome — Kuber will help you build a portfolio" message and a CTA to /Kuber/discover.
-
-For the live demo, ONLY use the Priya account.
-
-### 6.4 Floating Kuber widget
-
-Implemented once in `apps/web/src/components/FloatingKuber.tsx`, mounted in the root layout. Hidden on `/Kuber/*` and `/panic` via pathname check.
-
-### 6.5 Source the Figma Make output
-
-The Figma Make export IS the design system. Person 1 pastes the exported code into `apps/web/src/app/*` and adapts:
-- Replace any inline color hex codes with imports from `@investiq/ui/tokens`
-- Wire data from `@investiq/data` fixtures via `loadDemoData()`
-- Replace any client-side mock fetches with calls to the API routes above
+- Tax-lot accounting (flat 10% LTCG estimate)
+- Real Monte Carlo
+- International tax / regulations
+- Real fees (always $0 in receipt)
 
 ---
 
-## 7. Chrome extension (`apps/extension`)
+## 6. Kuber (the agent)
+
+In `packages/kuber`. Owned by Person 2.
+
+### 6.1 LLM provider — Groq
+
+Model `llama-3.3-70b-versatile`. OpenAI-compatible API. Env: `GROQ_API_KEY`.
+
+### 6.2 Voice
+
+- **STT:** Browser Web Speech API. In `apps/web` and `apps/extension`, NOT this package.
+- **TTS:** ElevenLabs streaming. Voice **Daniel**. Model `eleven_turbo_v2_5`. Env: `ELEVENLABS_*`.
+
+Latency budget: end of user speech → first audio: under 2s. Stream Groq sentence-by-sentence into ElevenLabs.
+
+### 6.3 System prompt
+
+Locked in `packages/kuber/src/prompts/index.ts`. Rules:
+
+1. NEVER compute numbers. Engine produces them.
+2. Three-layer jargon answers: human meaning, what it tells you, what it means for THIS user.
+3. Connect macro events to specific holdings.
+4. Default to "do nothing" when correct.
+5. No specific stock recommendations outside engine output.
+
+### 6.4 Public API
+
+```ts
+chat(messages, context) → AsyncIterable<string>          // for floating widget + extension
+narrate(recommendation, context) → AsyncIterable<string> // for /rebalance
+explainJargon(term, context) → AsyncIterable<string>     // for (i) tooltips
+speak(text) → ReadableStream<Uint8Array>                 // ElevenLabs TTS
+```
+
+### 6.5 Demo-mode hardcoding
+
+Hardcoded responses in `packages/kuber/src/demo-responses.ts` for:
+- Day 1 article exchange (extension)
+- Day 2 jargon question
+- Day 3 panic narration
+
+Live Groq is the default; hardcoded is the fallback if Groq is slow.
+
+---
+
+## 7. Web app (`apps/web`)
 
 ### 7.1 Stack
 
-Plasmo framework with React. Manifest V3. Content script + popup + background.
+Next.js 16 App Router · TypeScript strict · Tailwind · shadcn/ui · Recharts · Clerk auth · Workspace deps (`@investiq/ui|data|engine|kuber`).
 
-### 7.2 What it does
+### 7.2 API routes
 
-Click extension icon while browsing → injected overlay slides in from right side of the current page → Kuber chat appears with context from the page (article title, main text scraped via content script) → user voice-chats with Kuber → close overlay.
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/kuber/chat` | POST (SSE) | Streaming chat for widget + extension |
+| `/api/kuber/narrate` | POST (SSE) | Narration for /rebalance |
+| `/api/kuber/jargon` | POST (SSE) | Jargon explanation for tooltips |
+| `/api/kuber/speak` | POST | ElevenLabs TTS audio stream |
+| `/api/engine/scenario` | POST | Run a scenario, return ScenarioResult |
+| `/api/engine/rebalance` | POST | Generate rebalance recommendation |
+| `/api/engine/matches` | POST | Generate /Kuber matches based on filters |
+| `/api/portfolio` | GET | Current portfolio state (reads fixture) |
+| `/api/portfolio/commit` | POST | Commit basket from /Kuber to portfolio (in-memory) |
 
-### 7.3 What's on the demo path (Day 1)
+### 7.3 Auth
 
-1. Priya navigates to a CNBC article about RBI rates
-2. Clicks the InvestIQ extension icon
-3. Overlay appears, Kuber voice-greets her, ties article to her bond fund
-4. She closes overlay
+Clerk with one preloaded demo user (Priya). New signups land on empty state. **For live demo, ONLY use the Priya account.**
 
-Hardcode the response for the demo. The overlay calls `${NEXT_PUBLIC_APP_URL}/api/kuber/chat` for live questions but Day 1's specific exchange is pre-recorded for reliability.
+### 7.4 Floating Kuber widget
 
-### 7.4 Settings
+In `apps/web/src/components/FloatingKuber.tsx`, mounted in root layout. Hidden on `/Kuber/*`, `/rebalance/*`, and `/panic` via pathname check.
 
-Toolbar popup (small, ~320×400px) with: sign-in status, voice on/off toggle, "Open full app" button. NOT a clone of /home. Just settings.
+### 7.5 Source the Figma Make output
+
+Figma Make export IS the design system. Don't redesign. Person 1 pastes export into `apps/web/src/app/*` and adapts:
+- Replace inline hex codes with imports from `@investiq/ui/tokens`
+- Wire data from `@investiq/data` fixtures via `loadDemoData()`
+- Replace mock fetches with API route calls
 
 ---
 
-## 8. Design tokens
+## 8. Chrome extension (`apps/extension`)
 
-Full token list in `packages/ui/src/tokens.ts`. Summary:
+### 8.1 Stack
+
+Plasmo · React · Manifest V3 · content script + popup + background.
+
+### 8.2 What it does
+
+Click extension icon → injected overlay slides in from right side of current page → Kuber chat with page context → user voice/text-chats → close.
+
+### 8.3 Demo path (Day 1)
+
+1. Priya on a CNBC article about RBI rates
+2. Clicks extension icon
+3. Overlay appears, Kuber voice-greets, ties article to her bond fund
+4. Closes overlay
+
+Hardcode the response. Live `${NEXT_PUBLIC_APP_URL}/api/kuber/chat` for ad-hoc questions.
+
+### 8.4 Settings popup
+
+Toolbar popup ~320×400px. Sign-in status, voice on/off toggle, "Open full app" button. NOT a clone of /home.
+
+---
+
+## 9. Design tokens
+
+In `packages/ui/src/tokens.ts`.
 
 ```
 background:        #FAF8F5  warm off-white
@@ -511,63 +556,58 @@ cardBg:            #FFFFFF
 ```
 
 Type: Inter for UI, DM Serif Display for hero sentences and big numbers.
-
-Radii: 8 / 12 / 16 / 24 / pill (9999).
-
-NO red except in error states (which the demo mostly avoids). The Today's Change negative number is muted gray, not red.
+Radii: 8 / 12 / 16 / 24 / pill.
+NO red except real errors. Today's Change negative is muted gray, not red.
 
 ---
 
-## 9. Deployment
+## 10. Deployment
 
-- **Web app:** Netlify, connected to the GitHub repo's `main` branch. Auto-deploy on push.
-- **Extension:** Loaded unpacked from `apps/extension/build/chrome-mv3-prod` for the demo. Don't bother publishing to the Chrome Web Store — review takes weeks.
+- **Web app:** Netlify, connected to GitHub `main` branch. Auto-deploy on push.
+- **Extension:** Loaded unpacked from `apps/extension/build/chrome-mv3-prod` for the demo.
 
-Environment variables on Netlify: same as `.env.example`. Person 2 sets the keys; Person 1 deploys.
+Env vars on Netlify match `.env.example`. Person 2 sets keys; Person 1 deploys.
 
 ---
 
-## 10. Constraints, scope, and what we are explicitly NOT building
-
-These have been agreed and should not be quietly added back during the build:
+## 11. Constraints — what we are NOT building
 
 - No real database (static JSON fixtures only)
-- No real brokerage integration
+- No real brokerage integration (Plaid, etc.)
 - No multi-user real-time portfolios
 - No mobile native app
-- No production-grade security review
-- No internationalization (English only, despite the Indian persona)
-- No real Monte Carlo or sophisticated portfolio optimization
-- No tax-lot accounting; flat LTCG estimate only
-- No analyst-rating data feeds; "Bulls say / Bears say" is hand-written plain English
-- No real-time price feed; prices are snapshots in the fixture
-- No paid ElevenLabs voice cloning; the default Daniel voice
+- No production security review
+- No internationalization
+- No real Monte Carlo
+- No tax-lot accounting; flat LTCG estimate
+- No analyst-rating data feeds
+- No real-time price feed
+- No paid voice cloning
 - No production payment / billing
-- No PWA, service worker, offline mode
-- No accessibility audit (we aim for keyboard nav and reasonable contrast but won't promise WCAG AA)
-- No analytics, no telemetry
+- No PWA / service worker / offline
+- No accessibility audit
+- No analytics
 
-When a judge asks "how would you scale this?" the answer is: Postgres + Prisma for data, Plaid for brokerage links, real expected-return model with Monte Carlo, multi-tenant Clerk org, mobile native via Expo, full WCAG AA pass. Three-month roadmap. Not in this hackathon.
+If a judge asks "how would you scale?": Postgres + Prisma, Plaid, real expected-return model, multi-tenant Clerk org, mobile via Expo, full WCAG AA. Three-month roadmap.
 
 ---
 
-## 11. Definition of done for the demo
+## 12. Definition of done for the demo
 
-The demo is "done" when this script runs end-to-end without intervention:
-
-1. Priya logs in (or is already logged in on the demo machine)
-2. /home renders with hero, three numbers, journey chart, ask-Kuber chips, "what you should know today," and holdings preview
-3. Tap "Why did my portfolio drop?" chip → /Kuber chat mode → Kuber's voice response plays within 2 seconds
-4. Navigate to /current → grid of holdings, one with amber border
-5. Tap an amber-border card → /current/[symbol] detail with "How this fits your portfolio" panel
-6. Tap a (i) icon next to a jargon term → popover with plain explanation
+1. Priya logs in (or pre-logged on demo machine)
+2. /home renders with hero, three numbers, journey chart, ask-Kuber chips, "what you should know today," holdings preview
+3. Tap an "Ask Kuber" chip → floating widget opens with question pre-filled → Groq response streams + ElevenLabs voice plays within 2s
+4. Navigate to /current → grid with one amber-bordered card
+5. Tap amber card → /current/[symbol] detail with "How this fits your portfolio" panel
+6. Tap (i) icon → popover with plain explanation
 7. Back to /home → tap "I'm freaking out" → /panic with calm treatment
-8. Tap "Run a scenario" → /rebalance with scenario picker open → pick "What if the market drops 20%?"
-9. /rebalance loads with scenario mode active. Kuber narrates the projection. Receipt shows engine-computed before/after donuts, two trade cards, line items, "Confirm changes" button.
-10. Tap Confirm → animation → /home reloads with updated state and updated hero sentence
+8. Tap "Run a scenario" → /rebalance with scenario picker → "What if the market drops 20%?"
+9. /rebalance loads scenario mode. Kuber narrates. Receipt shows engine-computed before/after, two trade cards, line items, Confirm button.
+10. Tap Confirm → animation → /home reloads with updated state
+11. Bonus path: /Kuber → filters drawer → fill out → Apply & Start → matches appear → +Add → popup → Add to basket → Review & Confirm → /home updated
 
-If steps 3, 9, or 10 break, the demo fails. Everything else is recoverable on the fly.
+If steps 3, 9, or 10 break, demo fails. Everything else is recoverable on the fly.
 
 ---
 
-*This spec is current as of project setup. If you change architecture, update this document in the same PR.*
+*Update this document in the same PR as architecture changes.*

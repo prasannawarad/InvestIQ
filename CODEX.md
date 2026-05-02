@@ -1,6 +1,6 @@
 # CODEX.md
 
-Read this first. It is a fast onboarding for any human or AI agent (Codex, Claude Code, Cursor, etc.) joining the InvestIQ project.
+Read this first. Fast onboarding for any human or AI agent (Codex, Claude Code, Cursor) joining InvestIQ.
 
 If you have 30 seconds, read sections 1 and 2. If you have 5 minutes, read all of it. For exhaustive detail, read `PROJECT_SPEC.md`.
 
@@ -8,11 +8,11 @@ If you have 30 seconds, read sections 1 and 2. If you have 5 minutes, read all o
 
 ## 1. The 30-second pitch
 
-InvestIQ is a portfolio management web app for beginner investors. It has three surfaces: a Next.js web app, a Chrome extension, and an AI agent named **Kuber** (which appears in both surfaces, with voice).
+InvestIQ is a portfolio management web app for beginner investors. Three surfaces: Next.js web app, Chrome extension, and an AI agent named **Kuber** that appears in both.
 
-We're building it for the Goldman Sachs / UTD JSOM hackathon (May 2026). The judging rubric is 30% UX + 30% rebalancing innovation + 20% transparency + 20% execution.
+Hackathon: Goldman Sachs / UTD JSOM, May 2026. Rubric: 30% UX + 30% rebalancing innovation + 20% transparency + 20% execution.
 
-Demo persona is **Priya Sharma**, 38, schoolteacher, $22,300 invested, balanced risk profile, two goals (house deposit in 3 years, retirement in 26 years). The demo tells a 3-day story across the three surfaces. See `DEMO.md`.
+Demo persona: **Priya Sharma**, 38, schoolteacher, $22,300 invested, balanced risk profile, two goals (house in 3 years, retirement in 26). The demo tells a 3-day story across the surfaces. See `DEMO.md`.
 
 ---
 
@@ -21,13 +21,13 @@ Demo persona is **Priya Sharma**, 38, schoolteacher, $22,300 invested, balanced 
 ```
 investiq/
 ├── apps/
-│   ├── web/         Next.js 16 app — the main product
+│   ├── web/         Next.js 16 — the main product
 │   └── extension/   Plasmo Chrome extension
 ├── packages/
 │   ├── ui/          Design tokens + shared components
-│   ├── kuber/       LLM (Groq) + voice (ElevenLabs) integration
+│   ├── kuber/       Groq + ElevenLabs integration
 │   ├── engine/      Deterministic portfolio math
-│   ├── data/        Zod schemas + Priya's three demo JSON files
+│   ├── data/        Zod schemas + Priya's three fixtures
 │   └── config/      Shared TS config
 ├── scripts/         Setup helpers
 ├── DEMO.md          Word-for-word demo script
@@ -35,115 +35,114 @@ investiq/
 └── CODEX.md         You are here
 ```
 
-This is a **pnpm + Turborepo monorepo**. Always run pnpm commands from the repo root unless you need to be inside a specific app.
+pnpm + Turborepo monorepo. Run pnpm commands from the repo root unless inside a specific app.
 
 ---
 
-## 3. Setup (you, today)
+## 3. Three Kuber surfaces — each does ONE job
+
+This is the most important architectural fact in the project. Don't blur them.
+
+| Surface | Job | Layout |
+|---|---|---|
+| `/Kuber` page | **Discovery** — find new investments | Jobright-style: status banner, filters drawer, top-matches grid, running tally |
+| Floating widget | **Quick chat** — Q&A, jargon, "am I at risk?" | Bottom-right chat panel with chips above input |
+| Chrome extension overlay | **Contextual chat** — questions about the page being read | Injected into third-party pages, with "Open in app →" CTA |
+
+`/Kuber` has NO chat panel. Chat lives in the widget and extension. This is intentional — don't add chat to /Kuber later.
+
+---
+
+## 4. Setup (today)
 
 ```bash
-# 1. Clone (skip if you already have it)
 git clone <repo-url> investiq && cd investiq
-
-# 2. Bootstrap apps if not done yet
-pnpm setup:web         # creates apps/web (Next.js)
+pnpm setup:web         # creates apps/web (Next.js 16, Tailwind)
 pnpm setup:extension   # creates apps/extension (Plasmo)
-
-# 3. Install
 pnpm install
-
-# 4. Env vars
 cp .env.example apps/web/.env.local
-# Get keys from team Slack (#investiq channel)
-# Required: GROQ_API_KEY, ELEVENLABS_API_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY
-
-# 5. Run
-pnpm dev   # starts web on localhost:3000 + extension build watcher
+# Get keys from team Slack: GROQ_API_KEY, ELEVENLABS_API_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY
+pnpm dev
 ```
 
-If `pnpm dev` fails: check Node version is ≥ 20 and pnpm is ≥ 9 (`pnpm -v`). Then `pnpm install` again.
+If `pnpm dev` fails: Node ≥20, pnpm ≥9, then `pnpm install` again.
 
 ---
 
-## 4. Who owns what
+## 5. Who owns what
 
 | Person | Owns | Day 1 task |
 |---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, all "static" pages (/home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile) | Paste Figma Make code into apps/web/src/app/* and wire to `@investiq/data` |
-| 2 — Kuber | `packages/kuber`, /Kuber and all its sub-routes, chat UI, voice integration, floating widget | Implement `chat()` against Groq with streaming |
-| 3 — Engine | `packages/engine`, all the math | Implement `recommendRebalance()` and `simulateScenario('market-drop-20')` |
-| 4 — Extension + polish | `apps/extension`, /panic page, demo flow integration testing, recorded backup video | Get Plasmo overlay rendering on a real third-party page |
-
-If you're working with an AI agent (Codex, Claude Code), tell it which person you are first. It changes which files it should focus on.
+| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /panic, /settings, /profile, /help, /extension info page | Paste Figma Make code into apps/web/src/app/*, wire to `@investiq/data` |
+| 2 — Kuber | `packages/kuber`, /Kuber discovery page, floating widget, voice integration | Implement `chat()` against Groq with streaming |
+| 3 — Engine | `packages/engine`, /rebalance page, all the math including `generateMatches` for /Kuber | Implement `recommendRebalance()` and `simulateScenario('market-drop-20')` |
+| 4 — Extension + polish | `apps/extension`, demo flow integration, recorded backup video | Get Plasmo overlay rendering on a real third-party page |
 
 ---
 
-## 5. Coding standards
+## 6. Coding standards
 
-- **TypeScript strict mode.** No `any` without a comment explaining why.
-- **No silent shape changes** to schemas in `packages/data/src/schemas.ts`. Update the schema, then fixtures, then notify the team in Slack.
-- **No LLM calls in `packages/engine`.** Numbers come from deterministic code. Period.
+- **TypeScript strict mode.** No `any` without a comment.
+- **No silent shape changes** to schemas in `packages/data/src/schemas.ts`. Update Zod first, fixtures next, notify team in Slack.
+- **No LLM calls in `packages/engine`.** Numbers come from deterministic code.
 - **No portfolio math in `packages/kuber`.** Kuber narrates, doesn't compute.
 - **Use `@investiq/ui/tokens` for colors.** Don't hardcode hex.
-- **Plain language in user-facing text.** No "P/E ratio" without an (i) tooltip with translation. No "AUM," "expense ratio," etc. without translation.
+- **Plain language in user text.** No "P/E ratio" without an (i) tooltip with translation.
 - **Commit messages:** `[area] short description` — e.g. `[engine] implement market-drop-20 simulator`.
 
 ---
 
-## 6. Three rules that will save you time
+## 7. Three rules that save time
 
-### 6.1 Read PROJECT_SPEC.md before starting a new feature
+### 7.1 Read PROJECT_SPEC.md before starting a feature
+It tells you what's in scope and what's not. We've cut a lot — don't quietly add it back.
 
-It tells you what's in scope and what's not. We've already cut a lot — don't quietly add it back.
+### 7.2 Read DEMO.md before deciding "is this important?"
+If the feature isn't on the demo path, it's optional. Spend time on the path.
 
-### 6.2 Read DEMO.md before deciding "is this feature important?"
-
-If the feature isn't on the demo path, it's optional. Spend your time on the path.
-
-### 6.3 The Figma Make output is the design
-
-Don't redesign. Don't argue with the type sizes. Don't substitute a different chart library. The visual decisions are made. Implement them.
+### 7.3 The Figma Make output is the design
+Don't redesign. Don't argue with type sizes. Don't substitute a different chart library. Decisions are made. Implement them.
 
 ---
 
-## 7. AI agent instructions (Codex / Claude Code / Cursor)
+## 8. AI agent instructions (Codex / Claude Code / Cursor)
 
 If you are an AI coding agent, follow these rules:
 
 1. **Always read `PROJECT_SPEC.md` before generating code.** It contains the contracts you must respect.
-2. **Always read the relevant package README** (`packages/<name>/README.md`) before working in that package. Each package has a clear "Public API" section that defines what its functions return.
-3. **Follow the Zod schemas in `packages/data/src/schemas.ts`** as the source of truth for data shapes. If a TypeScript type and a Zod schema disagree, the Zod schema wins.
-4. **Do not introduce new dependencies** without checking if they're already in another workspace package. Use `pnpm` to add: `cd <app-or-package> && pnpm add <name>`.
+2. **Always read the relevant package README** (`packages/<name>/README.md`) before working in that package.
+3. **Follow Zod schemas in `packages/data/src/schemas.ts`** as the source of truth for data shapes.
+4. **Do not introduce new dependencies** without checking workspace packages first. Use `pnpm add` from the right directory.
 5. **Do not introduce new colors, fonts, or radii.** Use `@investiq/ui/tokens`.
-6. **Do not move files between packages without explicit instruction.** The package boundaries are intentional (engine is testable without LLM, kuber is replaceable independent of engine, ui is shared between web and extension).
-7. **Do not implement features marked "out of scope"** in PROJECT_SPEC.md section 10. If you think one is needed, surface the question to the human first.
-8. **Stream LLM output** wherever possible. The demo's perceived latency depends on streaming.
-9. **Use the demo fixtures** in `packages/data/src/fixtures/` for any default state. Don't make up new mock users.
-10. **When uncertain, narrow scope.** A working /home is worth more than a half-built /preview/[symbol].
+6. **Do not move files between packages without explicit instruction.** Boundaries are intentional.
+7. **Do not implement features marked "out of scope"** in PROJECT_SPEC.md section 11.
+8. **Stream LLM output** wherever possible. Demo's perceived latency depends on streaming.
+9. **Use demo fixtures** in `packages/data/src/fixtures/` for default state.
+10. **When uncertain, narrow scope.** A working /home is worth more than a half-built /preview.
+11. **`/Kuber` is discovery only.** Do not add a chat panel to `/Kuber` no matter what older comments or code suggest.
 
 ---
 
-## 8. Critical paths (do these work? if not, demo breaks)
-
-These are the parts of the app the demo absolutely depends on:
+## 9. Critical paths (demo breaks if these don't work)
 
 1. `/home` renders with real fixture data
-2. Tapping an "Ask Kuber" chip routes to `/Kuber` with a question pre-filled
-3. `/Kuber` chat mode produces a streaming response from Groq within ~2s
+2. Tapping an "Ask Kuber" chip opens the floating widget pre-filled
+3. Floating widget produces streaming Groq response within ~2s
 4. ElevenLabs streaming TTS plays the response audibly
-5. `/current` shows the holdings grid with engine-computed fit scores
-6. `/current/[symbol]` shows the "How this fits your portfolio" panel with real numbers
-7. `(i)` icons next to jargon terms open a popover and link to Kuber
-8. The "I'm freaking out" button on `/home` navigates to `/panic`
-9. `/panic` "Run a scenario" links to the scenario picker
-10. `/Kuber/scenario/market-drop-20` shows engine-computed projection AND a working "Confirm" button
-11. After Confirm, `/home` reloads with updated state
+5. `/current` shows holdings grid with engine-computed fit scores
+6. `/current/[symbol]` shows "How this fits your portfolio" panel with real numbers
+7. (i) icons next to jargon open popover and link to floating widget
+8. "I'm freaking out" button on /home navigates to /panic
+9. /panic "Run a scenario" links to /rebalance with scenario picker
+10. /rebalance/scenario shows engine-computed projection AND working "Confirm"
+11. After Confirm, /home reloads with updated state
+12. Bonus: /Kuber filter drawer → Start → matches appear → +Add → popup → Review & Confirm → /home updates
 
-Test these end-to-end every day. If any breaks, fix that before adding new features.
+Test these end-to-end every day.
 
 ---
 
-## 9. Stack & versions (lock these)
+## 10. Stack & versions (lock these)
 
 - Node ≥ 20
 - pnpm ≥ 9
@@ -156,31 +155,31 @@ Test these end-to-end every day. If any breaks, fix that before adding new featu
 - Clerk (latest)
 - Zod 3.23+
 
-Don't upgrade in the middle of the hackathon. If a dep breaks, downgrade and fix forward.
+Don't upgrade mid-hackathon. If a dep breaks, downgrade and fix forward.
 
 ---
 
-## 10. When the demo gets close
+## 11. When the demo gets close
 
-24 hours before the demo:
+24 hours before:
 
-1. Person 4 records a complete backup video of the demo flow
+1. Person 4 records a complete backup video
 2. Lock the demo Chrome profile (logged in as Priya, extension installed, no other tabs)
-3. Test the demo on the actual demo machine, not a dev laptop
-4. Verify Groq API key is not rate-limited (recent free tier limits: 30 RPM)
-5. Verify ElevenLabs has credits remaining
-6. Practice the demo script (`DEMO.md`) at least 3 times together
+3. Test on the actual demo machine
+4. Verify Groq API key is not rate-limited (free tier: 30 RPM)
+5. Verify ElevenLabs has credits
+6. Practice the demo script from `DEMO.md` at least 3 times together
 
-If something flakes live, **switch to the backup video without comment** and keep narrating. Judges have seen this happen many times.
+If something flakes live, **switch to backup video without comment** and keep narrating.
 
 ---
 
-## 11. Asking for help
+## 12. Asking for help
 
-- Stuck on a feature? Check `PROJECT_SPEC.md` first. Then Slack the owner.
-- Stuck on the spec itself? Slack the team. Don't write code that contradicts the spec.
+- Stuck on a feature? Check `PROJECT_SPEC.md`. Then Slack the owner.
+- Stuck on the spec? Slack the team. Don't write code that contradicts the spec.
 - Not sure if something's in scope? It probably isn't. When in doubt, narrow.
 
 ---
 
-*This document is short on purpose. The full spec is in PROJECT_SPEC.md. The demo script is in DEMO.md. Read those, then this, then start building.*
+*Short on purpose. Full spec in PROJECT_SPEC.md. Demo script in DEMO.md.*
