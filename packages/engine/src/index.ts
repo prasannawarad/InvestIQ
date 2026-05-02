@@ -102,6 +102,17 @@ function fallbackHolding(assetClass: KnownAssetClass): { symbol: string; name: s
   return { symbol: "EQUITY_BASKET", name: "Equity Allocation Basket" };
 }
 
+/** Deterministic per portfolio so different users see different trade legs; same portfolio stays stable across reloads. */
+function portfolioShuffleSeed(portfolioId: string, salt: string): number {
+  let h = 2166136261;
+  const str = `${portfolioId}:${salt}`;
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 type TradeTarget = { symbol: string; name: string; weight: number };
 
 function pickTradeTargets(
@@ -132,7 +143,9 @@ function pickTradeTargets(
     }
   }
 
-  return [{ symbol: holdings[0].symbol, name: holdings[0].name, weight: 1 }];
+  const seed = portfolioShuffleSeed(portfolio.portfolio_id, `${assetClass}-${action}`);
+  const idx = holdings.length <= 1 ? 0 : seed % holdings.length;
+  return [{ symbol: holdings[idx].symbol, name: holdings[idx].name, weight: 1 }];
 }
 
 function splitTradeAmount(totalAmount: number, targets: TradeTarget[]): Array<{ symbol: string; name: string; amount: number }> {
