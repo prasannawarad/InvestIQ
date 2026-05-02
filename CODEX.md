@@ -75,7 +75,7 @@ If `pnpm dev` fails: Node ≥20, pnpm ≥9, then `pnpm install` again.
 |---|---|---|
 | 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /panic, /settings, /profile, /help, /extension info page | Paste Figma Make code into apps/web/src/app/*, wire to Supabase + tokens |
 | 2 — Kuber | `packages/kuber`, /Kuber discovery page, floating widget, voice integration | Implement `chat()` against Groq with streaming |
-| 3 — Engine | `packages/engine`, /rebalance page, all the math including `generateMatches` for /Kuber | Implement `recommendRebalance()` and `simulateScenario('market-drop-20')` |
+| 3 — Engine | `packages/engine`, `/rebalance`, engine API routes, all math incl. `generateMatches` | **Shipped:** full engine surface + rebalance UI, Supabase **Confirm changes**, deep links `?source=panic` \| `?source=scenario` \| `&name=market-drop-20` (see `PROJECT_SPEC` §3.5) |
 | 4 — Extension + polish | `apps/extension`, demo flow integration, recorded backup video | Get Plasmo overlay rendering on a real third-party page |
 
 ---
@@ -139,9 +139,9 @@ If you are an AI coding agent, follow these rules:
 6. `/current/[symbol]` shows "How this fits your portfolio" panel with real numbers
 7. (i) icons next to jargon open popover and link to floating widget
 8. "I'm freaking out" button on /home navigates to /panic
-9. /panic "Run a scenario" links to /rebalance with scenario picker
-10. /rebalance/scenario shows engine-computed projection AND working "Confirm"
-11. After Confirm, /home reloads with updated state
+9. /panic "Run a scenario" links to `/rebalance?source=scenario` (scenario mode)
+10. `/rebalance` scenario / drift / panic shows engine-computed projection AND working **Confirm changes** (persists to Supabase)
+11. After Confirm, navigate to `/home`; data reflects updated `portfolios` / `holdings` on next load
 12. Bonus: /Kuber filter drawer → Start → matches appear → +Add → popup → Review & Confirm → /home updates
 
 Test these end-to-end every day.

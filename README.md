@@ -36,7 +36,7 @@ investiq/
 |---|---|---|
 | 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Run `pnpm setup:web`, paste in Figma Make exported code, wire to Supabase + shared tokens |
 | 2 — Kuber | `packages/kuber`, floating widget + extension chat, voice pipeline | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
-| 3 — Engine | `packages/engine`, scenario math, rebalancing algorithm, fit-score, discovery ranking | Implement deterministic `simulateScenario`, `recommendRebalance`, `computeFitScore`, `computeGoalImpact`, `generateMatches` |
+| 3 — Engine | `packages/engine`, **`/rebalance`** (drift / scenario / panic), engine API routes, Supabase commit on Confirm | Shipped: deterministic engine APIs + rebalance UI, receipt, **`Confirm changes` → `portfolios` / `holdings`** (`apps/web/src/lib/applyRebalanceCommit.ts`), URL deep links (`?source=panic`, `?source=scenario`, `&name=…`) |
 | 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Run `pnpm setup:extension`, scaffold Plasmo, get Kuber overlay rendering on apple.com / cnbc.com |
 
 ## Day 1 setup
@@ -66,6 +66,7 @@ After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/w
 ## Mock data usage (current)
 
 - **Supabase seed (`02_supabase_seed_mock_data.sql`)** is the canonical demo data source for profile, goals, portfolio, holdings, and market events.
+- **`/rebalance` → Confirm changes** updates the signed-in user’s **`portfolios`** and **`holdings`** rows in Supabase (same column contract as the seed). Re-run the seed SQL if you need to reset the demo portfolio.
 - **`packages/data/src/fixtures/*`** remain as schema contracts and fallback demo fixtures.
 - **`packages/engine/src/universe.ts`** is intentionally mock/fictional and used only for `generateMatches()` ranking on `/Kuber`.
 
@@ -73,6 +74,7 @@ After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/w
 
 - **End of Day 2:** Person 1's /home + Person 2's chat working together on a real Kuber question with Groq.
 - **End of Day 3:** Person 3's rebalance engine output flowing through Person 2's narrator into Person 4's /panic flow.
+- **Person 3 (engine + /rebalance):** Engine package + `/api/engine/*` + rebalance page with Supabase persistence and query-param deep links are implemented; optional polish remains streaming Kuber narration on `/rebalance` (Person 2).
 
 ## Demo
 
