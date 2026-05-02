@@ -72,6 +72,12 @@ function toApiTurns(rows: ChatRow[]): { role: "user" | "assistant"; content: str
 
 const FLOATING_KUBER_CUE_GROUPS = [...KUBER_CUE_GROUPS, KUBER_EXTENSION_PAGE_CUES];
 
+const HINT_MESSAGES = [
+  "How's your portfolio today?",
+  "Ask Kuber anything →",
+  "See what changed today",
+] as const;
+
 /** PROJECT_SPEC routing: scenario / drift language opens Rebalance instead of hallucinating trades in chat. */
 function rebalanceHrefFromPrompt(prompt: string): string | null {
   const t = prompt.trim().toLowerCase();
@@ -321,6 +327,39 @@ export function FloatingKuber() {
   );
 
   const showCueChips = !chatMessages.some((message) => message.role === "user");
+
+  const [showHint, setShowHint] = useState(false);
+  const [hintIdx, setHintIdx] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    function schedule(delay: number, fn: () => void) {
+      const t = setTimeout(() => {
+        if (active) fn();
+      }, delay);
+      timers.push(t);
+    }
+
+    function cycle(idx: number) {
+      setHintIdx(idx);
+      setShowHint(true);
+      schedule(2200, () => {
+        setShowHint(false);
+        schedule(2800, () => cycle((idx + 1) % HINT_MESSAGES.length));
+      });
+    }
+
+    if (!isOpen && !isHiddenRoute) {
+      schedule(3000, () => cycle(0));
+    }
+
+    return () => {
+      active = false;
+      for (const t of timers) clearTimeout(t);
+    };
+  }, [isOpen, isHiddenRoute]);
 
   const lastKuberReply = useMemo(() => {
     for (let i = chatMessages.length - 1; i >= 0; i--) {
@@ -582,23 +621,79 @@ export function FloatingKuber() {
   return (
     <>
       {!isOpen ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 flex h-[3.65rem] w-[3.65rem] cursor-pointer items-center justify-center rounded-full ring-[3px] transition-[transform,opacity] duration-200 hover:brightness-105 active:scale-[0.97] motion-safe:hover:scale-[1.04]"
-          aria-label="Open Kuber assistant"
-          style={{
-            zIndex: Z_FAB,
-            background: `linear-gradient(145deg, ${colors.accent} 12%, ${colors.green} 130%)`,
-            color: colors.onAccent,
-            boxShadow: shadows.floatingButton,
-            borderColor: `${colors.onAccent}55`,
-          }}
+        <div
+          className="fixed bottom-6 right-6"
+          style={{ zIndex: Z_FAB, width: "3.65rem", height: "3.65rem" }}
         >
-          <span className="text-2xl select-none" style={{ fontFamily: typography.serif }}>
-            K
-          </span>
-        </button>
+          {/* Pulse ring 1 */}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ border: `2px solid ${colors.accent}`, pointerEvents: "none" }}
+            animate={{ scale: [1, 1.88], opacity: [0.55, 0] }}
+            transition={{ duration: 0.85, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2.15, ease: "easeOut" }}
+          />
+          {/* Pulse ring 2 — offset for double-ping feel */}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ border: `2px solid ${colors.accent}`, pointerEvents: "none" }}
+            animate={{ scale: [1, 1.88], opacity: [0.4, 0] }}
+            transition={{ duration: 0.85, repeat: Number.POSITIVE_INFINITY, repeatDelay: 2.15, ease: "easeOut", delay: 0.3 }}
+          />
+
+          {/* FAB button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full ring-[3px] transition-[filter] duration-200 hover:brightness-110 active:scale-[0.97]"
+            aria-label="Open Kuber assistant"
+            style={{
+              background: `linear-gradient(145deg, ${colors.accent} 12%, ${colors.green} 130%)`,
+              color: colors.onAccent,
+              boxShadow: shadows.floatingButton,
+              borderColor: `${colors.onAccent}55`,
+            }}
+          >
+            <span className="select-none text-2xl" style={{ fontFamily: typography.serif }}>
+              K
+            </span>
+          </button>
+
+          {/* Peek hint tooltip */}
+          <AnimatePresence>
+            {showHint ? (
+              <motion.div
+                className="absolute right-full top-1/2 mr-3 -translate-y-1/2 rounded-xl px-4 py-2.5 text-sm"
+                style={{
+                  background: colors.cardBg,
+                  border: `1px solid ${colors.accent}50`,
+                  color: colors.text,
+                  pointerEvents: "none",
+                  whiteSpace: "nowrap",
+                  boxShadow: `0 8px 28px rgba(0,0,0,0.45), 0 0 0 1px ${colors.accent}10`,
+                  fontFamily: typography.sans,
+                }}
+                initial={{ opacity: 0, x: 8, scale: 0.92 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 4, scale: 0.95 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+              >
+                {HINT_MESSAGES[hintIdx]}
+                {/* Arrow pointing right toward button */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2"
+                  style={{
+                    right: "-6px",
+                    width: 0,
+                    height: 0,
+                    borderTop: "6px solid transparent",
+                    borderBottom: "6px solid transparent",
+                    borderLeft: `6px solid ${colors.accent}50`,
+                  }}
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
       ) : null}
 
       {portalModal}

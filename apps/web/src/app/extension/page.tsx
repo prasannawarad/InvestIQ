@@ -22,7 +22,7 @@ function deployedAppHint(): string {
 
 export default function ExtensionPage() {
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[980px]">
         <Link href="/home" className="text-sm hover:underline" style={{ color: colors.textMuted, fontFamily: typography.sans }}>
           ← Back to Home

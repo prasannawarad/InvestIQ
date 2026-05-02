@@ -18,37 +18,42 @@ interface HoldingCardProps {
 export function HoldingCard({ id, name, type, value, fitScore, logo, percentage }: HoldingCardProps) {
   const fitColor = fitScore >= 80 ? colors.green : fitScore >= 60 ? colors.amber : colors.coral;
   const cardSurface = investiqCardStyle();
+  const needsAttention = fitScore < 80;
 
   return (
     <Link
       href={`/current/${id}`}
-      className="block p-6 text-[color:var(--investiq-text)] no-underline transition-shadow hover:brightness-[1.02]"
+      className="group block p-6 text-[color:var(--investiq-text)] no-underline transition-[transform,filter,box-shadow] duration-200 hover:brightness-[1.02] hover:drop-shadow-[0_18px_40px_rgba(0,0,0,0.35)] active:scale-[0.997]"
       style={{
         ...cardSurface,
-        border: fitScore < 80 ? `2px solid ${colors.amber}` : cardSurface.border,
+        borderColor: needsAttention ? `color-mix(in srgb, ${fitColor} 38%, ${colors.cardBorder})` : (cardSurface.border as string).replace("1px solid ", ""),
+        boxShadow: needsAttention
+          ? `inset 0 1px 0 rgba(255,255,255,0.045), inset 0 -1px 0 rgba(0,0,0,0.35), 0 18px 46px rgba(0,0,0,0.42), 0 0 0 1px color-mix(in srgb, ${fitColor} 26%, transparent), 0 0 34px color-mix(in srgb, ${fitColor} 18%, transparent)`
+          : cardSurface.boxShadow,
       }}
     >
       <div className="mb-4 flex items-start justify-between">
-        <div className="flex items-start gap-3">
+        <div className="min-w-0 flex items-start gap-3">
           <div
             className="flex h-10 w-10 items-center justify-center rounded-full text-sm"
             style={{ backgroundColor: colors.surfaceElevated, color: colors.text }}
           >
             {logo}
           </div>
-          <div>
-            <div className="mb-1" style={{ color: colors.text }}>
+          <div className="min-w-0">
+            <div className="mb-1 truncate" title={name} style={{ color: colors.text }}>
               {name}
             </div>
-            <div className="text-sm" style={{ color: colors.textMuted }}>
+            <div className="truncate text-sm" title={type} style={{ color: colors.textMuted }}>
               {type}
             </div>
           </div>
         </div>
         <div
-          className="rounded-full px-3 py-1 text-sm"
+          className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
           style={{
-            backgroundColor: `${fitColor}22`,
+            backgroundColor: `color-mix(in srgb, ${fitColor} 18%, ${colors.surface})`,
+            border: `1px solid color-mix(in srgb, ${fitColor} 30%, ${colors.border})`,
             color: fitColor,
           }}
         >
@@ -67,7 +72,7 @@ export function HoldingCard({ id, name, type, value, fitScore, logo, percentage 
 
       <button
         type="button"
-        className="flex items-center gap-1 text-sm hover:underline"
+        className="flex items-center gap-1 text-sm underline-offset-4 hover:underline"
         style={{ color: colors.accent }}
         onClick={(event) => {
           event.preventDefault();
