@@ -1,0 +1,32 @@
+{
+  "name": "@investiq/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InvestIQ Chrome extension with Kuber contextual overlay.",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@investiq/data": "workspace:*",
+    "@investiq/kuber": "workspace:*",
+    "@investiq/ui": "workspace:*",
+    "plasmo": "^0.90.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  },
+  "manifest": {
+    "name": "InvestIQ",
+    "description": "Kuber follows you across the web to answer money questions in context.",
+    "permissions": [
+      "activeTab"
+    ]
+  }
+}

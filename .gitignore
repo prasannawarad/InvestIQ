@@ -1,0 +1,15 @@
+node_modules/
+.turbo/
+.DS_Store
+
+# Generated app/build output
+.next/
+dist/
+build/
+.plasmo/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
