@@ -2,13 +2,13 @@
 // Keep surfaces cool-teal tinted; accents stay one family for cohesiveness.
 
 export const colors = {
-  background: "#06090f",
-  backgroundPanic: "#080c13",
+  background: "#0b0d12",
+  backgroundPanic: "#0e1015",
   /** Sidebar, sticky bars, recessed strips */
-  surface: "#0b1018",
-  surfaceElevated: "#101827",
-  text: "#e8eef6",
-  textMuted: "#7c8da3",
+  surface: "#131722",
+  surfaceElevated: "#1a1f2d",
+  text: "#edf0f7",
+  textMuted: "#a0a8bc",
 
   accent: "#2dd4bf",
   accentMuted: "#1a9e8f",
@@ -17,18 +17,18 @@ export const colors = {
   green: "#4ade93",
   amber: "#e8bd5c",
 
-  border: "#1e2d3f",
-  borderSubtle: "#141e2d",
+  border: "#2e3445",
+  borderSubtle: "#242a3a",
 
-  cardBg: "#0a1119",
-  cardBorder: "#1a2840",
+  cardBg: "#121724",
+  cardBorder: "#30374b",
 
   /** Inputs, nested wells */
-  inputBg: "#060a10",
+  inputBg: "#101521",
   /** Text/icons on accent-filled CTAs */
   onAccent: "#031016",
   /** Modal scrims */
-  overlay: "rgba(5, 8, 14, 0.72)",
+  overlay: "rgba(8, 10, 16, 0.76)",
 } as const;
 
 export const typography = {
@@ -63,8 +63,8 @@ export const radii = {
 } as const;
 
 export const shadows = {
-  card: "inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 40px rgba(0,0,0,0.45)",
-  popover: "0 28px 90px rgba(0,0,0,0.55)",
+  card: "inset 0 1px 0 rgba(255,255,255,0.06), 0 14px 40px rgba(0,0,0,0.4)",
+  popover: "0 30px 90px rgba(0,0,0,0.48)",
   floatingButton: "0 10px 36px rgba(45,212,191,0.28)",
 } as const;
 

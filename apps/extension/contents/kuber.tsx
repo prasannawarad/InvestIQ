@@ -32,6 +32,25 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+function shouldInjectOnCurrentPage(): boolean {
+  const current = window.location;
+  if (!current) return true;
+
+  // Prevent double assistants: do not inject extension bubble inside InvestIQ web app.
+  try {
+    const app = new URL(APP_URL);
+    if (current.origin === app.origin) return false;
+  } catch {
+    // ignore malformed APP_URL and continue with localhost guardrails
+  }
+
+  const host = current.hostname.toLowerCase();
+  const port = current.port;
+  if ((host === "localhost" || host === "127.0.0.1") && port === "3000") return false;
+
+  return true;
+}
+
 type KuberApiMsg = {
   role: "user" | "assistant";
   content: string;
@@ -486,6 +505,7 @@ function dispatchBubbleCommand(command: HostBubbleCommand) {
 
 function mountBubbleHost() {
   if (typeof document === "undefined") return;
+  if (!shouldInjectOnCurrentPage()) return;
 
   if (!csMessageBridgeWired && chrome.runtime?.onMessage) {
     csMessageBridgeWired = true;
