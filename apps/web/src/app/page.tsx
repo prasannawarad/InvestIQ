@@ -1,8 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle, investiqFieldStyle } from "../lib/investiqUi";
 import { useAuth } from "./components/auth/AuthProvider";
+import { InvestiqButton } from "./components/investiq/InvestiqButton";
 import { DEMO_USER } from "../lib/demoUser";
 
 export default function LoginPage() {
@@ -32,15 +34,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
-      <section
-        className="w-full max-w-[460px] p-8"
-        style={{
-          borderRadius: radii.xl,
-          backgroundColor: colors.cardBg,
-          boxShadow: shadows.popover,
-          border: `1px solid ${colors.border}`,
-        }}
-      >
+      <section className="w-full max-w-[460px] p-8" style={{ ...investiqCardStyle(), boxSizing: "border-box" }}>
         <h1 className="mb-2 text-4xl" style={{ fontFamily: typography.serif, color: colors.text }}>
           InvestIQ
         </h1>
@@ -49,8 +43,8 @@ export default function LoginPage() {
         </p>
 
         <div
-          className="mb-4 rounded-lg p-3 text-xs"
-          style={{ backgroundColor: colors.backgroundPanic, color: colors.text }}
+          className="mb-4 rounded-lg border p-3 text-xs"
+          style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
         >
           <div className="mb-1" style={{ fontWeight: 600 }}>
             Demo account (seeded in Supabase)
@@ -72,16 +66,9 @@ export default function LoginPage() {
           </button>
         </div>
 
-        <button
-          type="button"
-          className="mb-4 w-full px-4 py-3 text-sm"
-          style={{ borderRadius: radii.md, backgroundColor: colors.accent, color: colors.cardBg }}
-          onClick={() => {
-            void signInWithGoogle();
-          }}
-        >
+        <InvestiqButton variant="secondary" fullWidth className="mb-4" onClick={() => void signInWithGoogle()}>
           Continue with Google
-        </button>
+        </InvestiqButton>
 
         <div className="mb-4 text-center text-xs" style={{ color: colors.textMuted }}>
           or
@@ -94,8 +81,8 @@ export default function LoginPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Email"
-            className="w-full px-4 py-3 text-sm outline-none"
-            style={{ borderRadius: radii.md, border: `1px solid ${colors.border}`, color: colors.text }}
+            className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--investiq-accent)]/35"
+            style={investiqFieldStyle()}
           />
           <input
             type="password"
@@ -104,8 +91,8 @@ export default function LoginPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Password"
-            className="w-full px-4 py-3 text-sm outline-none"
-            style={{ borderRadius: radii.md, border: `1px solid ${colors.border}`, color: colors.text }}
+            className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--investiq-accent)]/35"
+            style={investiqFieldStyle()}
           />
 
           {error ? (
@@ -114,14 +101,9 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full px-4 py-3 text-sm disabled:opacity-60"
-            style={{ borderRadius: radii.md, backgroundColor: colors.text, color: colors.cardBg }}
-          >
+          <InvestiqButton type="submit" variant="primary" fullWidth disabled={pending}>
             {pending ? "Please wait..." : mode === "signin" ? "Sign in with email" : "Create account"}
-          </button>
+          </InvestiqButton>
         </form>
 
         <button

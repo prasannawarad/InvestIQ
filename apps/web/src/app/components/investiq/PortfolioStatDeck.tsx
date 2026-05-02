@@ -2,7 +2,8 @@
 
 import { CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../../lib/investiqUi";
 import { AnimatedCounter } from "./AnimatedCounter";
 
 const cardVariants = {
@@ -49,9 +50,7 @@ export function PortfolioStatDeck({
         <div
           className="relative overflow-hidden p-6 ring-1"
           style={{
-            borderRadius: radii.xl,
-            boxShadow: shadows.card,
-            backgroundColor: colors.cardBg,
+            ...investiqCardStyle(),
             borderColor: `${colors.border}cc`,
           }}
         >
@@ -65,7 +64,7 @@ export function PortfolioStatDeck({
           <div className="text-3xl" style={{ fontFamily: typography.serif, color: colors.text }}>
             <AnimatedCounter value={totalValueUsd} format={(v) => currency0(v)} />
           </div>
-          <motion.div className="mt-2 h-1 overflow-hidden rounded-full" style={{ backgroundColor: colors.backgroundPanic }}>
+          <motion.div className="mt-2 h-1 overflow-hidden rounded-full" style={{ backgroundColor: colors.surface }}>
             <motion.div
               className="h-full rounded-full"
               style={{
@@ -84,9 +83,7 @@ export function PortfolioStatDeck({
         <div
           className="relative overflow-hidden p-6 ring-1"
           style={{
-            borderRadius: radii.xl,
-            boxShadow: shadows.card,
-            backgroundColor: colors.cardBg,
+            ...investiqCardStyle(),
             borderColor: `${colors.border}cc`,
           }}
         >
@@ -107,9 +104,7 @@ export function PortfolioStatDeck({
         <div
           className="relative overflow-hidden p-6 ring-1"
           style={{
-            borderRadius: radii.xl,
-            boxShadow: shadows.card,
-            backgroundColor: colors.cardBg,
+            ...investiqCardStyle(),
             borderColor: `${colors.border}cc`,
           }}
         >

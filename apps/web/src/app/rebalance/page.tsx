@@ -5,7 +5,9 @@ import { startTransition, Suspense, useEffect, useMemo, useRef, useState } from 
 import { ChevronDown } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { toast } from "sonner";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, radii, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle, investiqFilterChipStyle, investiqTabStyle } from "../../lib/investiqUi";
+import { InvestiqButton } from "../components/investiq/InvestiqButton";
 import type { RebalanceRecommendation } from "@investiq/data";
 import type { RebalanceSource, ScenarioName, ScenarioResult } from "@investiq/engine";
 import { useAuth } from "../components/auth/AuthProvider";
@@ -346,16 +348,10 @@ function RebalancePageContent() {
                   setExpanded(null);
                   setMode(item);
                 }}
-                className="px-6 py-2 text-sm"
-                style={{
-                  borderRadius: radii.pill,
-                  backgroundColor: mode === item ? colors.accent : colors.cardBg,
-                  color: mode === item ? colors.cardBg : colors.text,
-                  boxShadow: mode === item ? "none" : shadows.card,
-                }}
+                style={investiqTabStyle(mode === item)}
               >
                 {item}
-                {item === "Scenario" ? <ChevronDown className="ml-1 inline h-4 w-4" /> : null}
+                {item === "Scenario" ? <ChevronDown className="ml-1 inline h-4 w-4 align-middle" /> : null}
               </button>
             ))}
           </div>
@@ -369,12 +365,9 @@ function RebalancePageContent() {
                     setExpanded(null);
                     setSelectedScenario(option.key);
                   }}
-                  className="px-4 py-2 text-xs"
                   style={{
-                    borderRadius: radii.pill,
-                    backgroundColor: selectedScenario === option.key ? colors.accent : colors.cardBg,
-                    color: selectedScenario === option.key ? colors.cardBg : colors.text,
-                    boxShadow: selectedScenario === option.key ? "none" : shadows.card,
+                    ...investiqFilterChipStyle(selectedScenario === option.key),
+                    fontSize: "12px",
                   }}
                 >
                   {option.label}
@@ -399,7 +392,10 @@ function RebalancePageContent() {
           ) : null}
         </header>
 
-        <section className="mb-8 p-6" style={{ borderRadius: radii.xl, backgroundColor: colors.backgroundPanic }}>
+        <section
+          className="mb-8 border p-6"
+          style={{ borderRadius: radii.xl, borderColor: colors.borderSubtle, backgroundColor: colors.surface }}
+        >
           <div className="flex items-start gap-4">
             <KuberOrb size="sm" className="-mt-2" />
             <p className="leading-relaxed" style={{ color: colors.text }}>
@@ -413,7 +409,7 @@ function RebalancePageContent() {
           ) : null}
         </section>
 
-        <section className="p-8" style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}>
+        <section className="p-8" style={investiqCardStyle()}>
           <h2 className="mb-8 text-2xl" style={{ color: colors.text, fontFamily: typography.serif }}>
             Recommended changes
           </h2>
@@ -480,7 +476,11 @@ function RebalancePageContent() {
 
           <div className="mb-8 space-y-4">
             {hasTrades ? model.trades.map((trade, idx) => (
-              <div key={`${trade.action}-${trade.symbol}-${idx}`} className="p-4" style={{ borderRadius: radii.lg, backgroundColor: colors.backgroundPanic }}>
+              <div
+                key={`${trade.action}-${trade.symbol}-${idx}`}
+                className="border p-4"
+                style={{ borderRadius: radii.lg, borderColor: colors.borderSubtle, backgroundColor: colors.surface }}
+              >
                 <button
                   type="button"
                   onClick={() => setExpanded(expanded === idx ? null : idx)}
@@ -504,7 +504,10 @@ function RebalancePageContent() {
                 ) : null}
               </div>
             )) : (
-              <div className="p-4 text-sm" style={{ borderRadius: radii.lg, backgroundColor: colors.backgroundPanic, color: colors.textMuted }}>
+              <div
+                className="border p-4 text-sm"
+                style={{ borderRadius: radii.lg, borderColor: colors.borderSubtle, backgroundColor: colors.surface, color: colors.textMuted }}
+              >
                 No trade needed right now. Your allocation is close enough to target.
               </div>
             )}
@@ -552,18 +555,18 @@ function RebalancePageContent() {
             </p>
           ) : null}
           <div className="flex items-center gap-4">
-            <button
+            <InvestiqButton
               type="button"
+              variant="primary"
               disabled={!hasTrades || committing}
+              className="min-w-0 flex-1"
               onClick={() => void handleConfirmChanges()}
-              className="flex-1 py-3 text-sm disabled:opacity-50"
-              style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}
             >
               {committing ? "Saving..." : "Confirm changes"}
-            </button>
+            </InvestiqButton>
             <button
               type="button"
-              className="text-sm"
+              className="shrink-0 px-3 py-2 text-sm hover:underline"
               style={{ color: colors.textMuted }}
               onClick={() => router.back()}
             >

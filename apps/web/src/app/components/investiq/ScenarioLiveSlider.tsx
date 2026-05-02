@@ -32,7 +32,7 @@ export function ScenarioLiveSlider({
     <div
       className="rounded-2xl p-6 ring-1"
       style={{
-        background: `linear-gradient(135deg, ${colors.backgroundPanic} 0%, ${colors.cardBg} 72%)`,
+        background: `linear-gradient(135deg, ${colors.surface} 0%, ${colors.cardBg} 72%)`,
         borderColor: `${colors.accent}28`,
       }}
     >
@@ -97,7 +97,7 @@ function usd(n: number) {
 
 function PreviewStat({ label, formatted }: { label: string; formatted: string }) {
   return (
-    <motion.div layout className="rounded-xl px-4 py-3 ring-1" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
+    <motion.div layout className="rounded-xl px-4 py-3 ring-1" style={{ borderColor: colors.border, backgroundColor: colors.surfaceElevated }}>
       <div className="mb-1 text-xs" style={{ color: colors.textMuted }}>
         {label}
       </div>

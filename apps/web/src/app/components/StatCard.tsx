@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../lib/investiqUi";
 
 interface StatCardProps {
   label: string;
@@ -18,10 +19,7 @@ export function StatCard({ label, value, change, changeType, icon }: StatCardPro
         : colors.textMuted;
 
   return (
-    <div
-      className="p-6"
-      style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-    >
+    <div className="p-6" style={investiqCardStyle()}>
       <div className="flex items-start justify-between">
         <div>
           <div className="mb-1 text-sm" style={{ color: colors.textMuted }}>

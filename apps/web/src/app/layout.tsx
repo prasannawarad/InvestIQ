@@ -17,13 +17,16 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="dark h-full antialiased" style={{ colorScheme: "dark" }}>
       <body
-        className="min-h-full"
+        className="min-h-full text-[color:var(--investiq-text)]"
         style={
           {
+            colorScheme: "dark",
             "--investiq-bg": colors.background,
             "--investiq-bg-panic": colors.backgroundPanic,
+            "--investiq-surface": colors.surface,
+            "--investiq-surface-elevated": colors.surfaceElevated,
             "--investiq-text": colors.text,
             "--investiq-text-muted": colors.textMuted,
             "--investiq-accent": colors.accent,
@@ -31,14 +34,17 @@ export default function RootLayout({
             "--investiq-green": colors.green,
             "--investiq-amber": colors.amber,
             "--investiq-border": colors.border,
+            "--investiq-border-subtle": colors.borderSubtle,
             "--investiq-card-bg": colors.cardBg,
             "--investiq-card-border": colors.cardBorder,
+            "--investiq-input-bg": colors.inputBg,
+            "--investiq-on-accent": colors.onAccent,
             "--investiq-font-sans": typography.sans,
             "--investiq-font-serif": typography.serif,
           } as CSSProperties
         }
       >
-        <div className="min-h-screen bg-[var(--investiq-bg)] text-[var(--investiq-text)]">
+        <div className="investiq-shell min-h-screen bg-[color:var(--investiq-bg)] text-[color:var(--investiq-text)]">
           <AuthProvider>
             <InvestiqToaster />
             <AppShell>{children}</AppShell>

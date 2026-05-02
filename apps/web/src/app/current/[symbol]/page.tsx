@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Info } from "lucide-react";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqButtonStyle, investiqCardStyle } from "../../../lib/investiqUi";
 import { computeFitScore } from "@investiq/engine";
 import { useAuth } from "../../components/auth/AuthProvider";
 import { getDashboardData } from "../../../lib/supabaseData";
@@ -139,10 +140,7 @@ export default function HoldingDetailPage() {
             </p>
           </div>
 
-          <div
-            className="min-w-[240px] p-5"
-            style={{ borderRadius: radii.lg, backgroundColor: colors.cardBg, boxShadow: shadows.card }}
-          >
+          <div className="min-w-[240px] p-5" style={investiqCardStyle()}>
             <div className="text-sm" style={{ color: colors.textMuted }}>
               Fit score
             </div>
@@ -155,7 +153,7 @@ export default function HoldingDetailPage() {
           </div>
         </header>
 
-        <section className="mb-8 p-6" style={{ borderRadius: radii.xl, backgroundColor: colors.cardBg, boxShadow: shadows.card }}>
+        <section className="mb-8 p-6" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl" style={{ color: colors.text }}>
             How this fits your portfolio
           </h2>
@@ -188,13 +186,13 @@ export default function HoldingDetailPage() {
         </section>
 
         <section className="mb-8 grid grid-cols-2 gap-4">
-          <article className="p-5" style={{ borderRadius: radii.lg, backgroundColor: colors.cardBg, boxShadow: shadows.card }}>
+          <article className="p-5" style={investiqCardStyle()}>
             <h3 className="mb-2" style={{ color: colors.text }}>Bulls say</h3>
             <p className="text-sm" style={{ color: colors.textMuted }}>
               Strong operating history, resilient cash flows, and long-term compounding potential if you stay allocated.
             </p>
           </article>
-          <article className="p-5" style={{ borderRadius: radii.lg, backgroundColor: colors.cardBg, boxShadow: shadows.card }}>
+          <article className="p-5" style={investiqCardStyle()}>
             <h3 className="mb-2" style={{ color: colors.text }}>Bears say</h3>
             <p className="text-sm" style={{ color: colors.textMuted }}>
               Valuation can compress during risk-off periods, and near-term returns may lag if rates remain elevated.
@@ -202,7 +200,7 @@ export default function HoldingDetailPage() {
           </article>
         </section>
 
-        <section className="mb-8 p-6" style={{ borderRadius: radii.xl, backgroundColor: colors.cardBg, boxShadow: shadows.card }}>
+        <section className="mb-8 p-6" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl" style={{ color: colors.text }}>
             Key stats in plain language
           </h2>
@@ -243,8 +241,7 @@ export default function HoldingDetailPage() {
 
         <button
           type="button"
-          className="px-6 py-3 text-sm"
-          style={{ borderRadius: radii.md, backgroundColor: colors.accent, color: colors.cardBg }}
+          style={investiqButtonStyle("primary")}
           onClick={() => {
             window.dispatchEvent(new CustomEvent("investiq:open-kuber", { detail: { prompt: `Tell me about ${model.name}` } }));
           }}

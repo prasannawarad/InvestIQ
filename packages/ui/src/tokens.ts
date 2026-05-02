@@ -1,23 +1,34 @@
-// Design tokens for InvestIQ. Imported by web app and extension.
-// Person 1 owns this file.
+// Design tokens — dark-first unified system (defaults for web + extension).
+// Keep surfaces cool-teal tinted; accents stay one family for cohesiveness.
 
 export const colors = {
-  // Default palette
-  background: "#FAF8F5",
-  backgroundPanic: "#F5F2EC", // /panic only
-  text: "#1A2438",
-  textMuted: "#6B7B8C",
+  background: "#06090f",
+  backgroundPanic: "#080c13",
+  /** Sidebar, sticky bars, recessed strips */
+  surface: "#0b1018",
+  surfaceElevated: "#101827",
+  text: "#e8eef6",
+  textMuted: "#7c8da3",
 
-  // Accents
-  accent: "#3D7A6F", // muted teal — primary CTAs, Kuber
-  coral: "#E8836B", // warm coral — "I'm freaking out" button only
-  green: "#7BA888", // soft green — healthy / positive
-  amber: "#D4A574", // soft amber — caution
+  accent: "#2dd4bf",
+  accentMuted: "#1a9e8f",
 
-  // Neutrals
-  border: "#E8E4DC",
-  cardBg: "#FFFFFF",
-  cardBorder: "#EFEBE3",
+  coral: "#f08078",
+  green: "#4ade93",
+  amber: "#e8bd5c",
+
+  border: "#1e2d3f",
+  borderSubtle: "#141e2d",
+
+  cardBg: "#0a1119",
+  cardBorder: "#1a2840",
+
+  /** Inputs, nested wells */
+  inputBg: "#060a10",
+  /** Text/icons on accent-filled CTAs */
+  onAccent: "#031016",
+  /** Modal scrims */
+  overlay: "rgba(5, 8, 14, 0.72)",
 } as const;
 
 export const typography = {
@@ -52,12 +63,11 @@ export const radii = {
 } as const;
 
 export const shadows = {
-  card: "0 1px 3px rgba(26, 36, 56, 0.06), 0 1px 2px rgba(26, 36, 56, 0.04)",
-  popover: "0 8px 24px rgba(26, 36, 56, 0.12)",
-  floatingButton: "0 4px 12px rgba(26, 36, 56, 0.15)",
+  card: "inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 40px rgba(0,0,0,0.45)",
+  popover: "0 28px 90px rgba(0,0,0,0.55)",
+  floatingButton: "0 10px 36px rgba(45,212,191,0.28)",
 } as const;
 
-// Semantic helpers — use these instead of hardcoding fit-score thresholds
 export function fitScoreColor(score: number): string {
   if (score >= 80) return colors.green;
   if (score >= 60) return colors.amber;

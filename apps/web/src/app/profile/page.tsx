@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../lib/investiqUi";
 import { useAuth } from "../components/auth/AuthProvider";
 import { getDashboardData, type SupabaseDashboardData } from "../../lib/supabaseData";
 
@@ -69,7 +70,7 @@ export default function ProfilePage() {
           Profile
         </h1>
 
-        <section className="mb-6 p-6" style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+        <section className="mb-6 p-6" style={investiqCardStyle()}>
           <h2 className="mb-4 text-lg" style={{ color: colors.text }}>About me</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div><div style={{ color: colors.textMuted }}>Name</div><div style={{ color: colors.text }}>{data.profile.name}</div></div>
@@ -79,7 +80,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="mb-6 p-6" style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+        <section className="mb-6 p-6" style={investiqCardStyle()}>
           <h2 className="mb-4 text-lg" style={{ color: colors.text }}>Financial snapshot</h2>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span style={{ color: colors.textMuted }}>Annual income</span><span style={{ color: colors.text }}>{toCurrency(Number(financial.annual_income ?? 0))}</span></div>
@@ -89,7 +90,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="mb-6 p-6" style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+        <section className="mb-6 p-6" style={investiqCardStyle()}>
           <h2 className="mb-4 text-lg" style={{ color: colors.text }}>Goals</h2>
           <div className="space-y-4">
             {data.goals.map((goal) => {
@@ -100,7 +101,7 @@ export default function ProfilePage() {
                     <span style={{ color: colors.text }}>{goal.name}</span>
                     <span style={{ color: colors.textMuted }}>{toCurrency(goal.current_progress)} / {toCurrency(goal.target_amount)}</span>
                   </div>
-                  <div className="h-2 overflow-hidden" style={{ borderRadius: radii.pill, backgroundColor: colors.backgroundPanic }}>
+                  <div className="h-2 overflow-hidden" style={{ borderRadius: radii.pill, backgroundColor: colors.surface }}>
                     <div className="h-full" style={{ width: `${pct}%`, backgroundColor: colors.accent }} />
                   </div>
                 </article>
@@ -109,7 +110,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="p-6" style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+        <section className="p-6" style={investiqCardStyle()}>
           <h2 className="mb-2 text-lg" style={{ color: colors.text }}>Risk profile summary</h2>
           <p className="text-sm" style={{ color: colors.textMuted }}>
             You&apos;re a {riskProfile.persona_label ?? "Balanced"} investor with {riskProfile.risk_tolerance ?? "medium"} risk tolerance.

@@ -14,9 +14,9 @@ export function InvestiqToaster() {
         style: {
           background: "var(--investiq-card-bg)",
           color: "var(--investiq-text)",
-          border: "1px solid var(--investiq-accent)",
+          border: "1px solid color-mix(in srgb, var(--investiq-accent) 55%, transparent)",
           fontFamily: "var(--investiq-font-sans), system-ui",
-          boxShadow: "0 24px 64px rgba(26,36,56,0.14)",
+          boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
           borderRadius: "14px",
         },
       }}

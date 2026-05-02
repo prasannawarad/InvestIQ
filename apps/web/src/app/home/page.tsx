@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqButtonStyle, investiqCardStyle, investiqFilterChipStyle, investiqOutlineCtaStyle } from "../../lib/investiqUi";
 import { HoldingCard } from "../components/HoldingCard";
 import { JourneyAreaChart } from "../components/investiq/JourneyAreaChart";
 import { KuberOrb } from "../components/investiq/KuberOrb";
@@ -227,41 +228,30 @@ export default function HomePage() {
             healthVerdict={model.healthVerdict}
           />
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/panic"
-              className="inline-flex rounded-2xl px-6 py-3 text-sm transition-opacity hover:opacity-95"
-              style={{ backgroundColor: colors.coral, color: colors.cardBg }}
+              className="transition-opacity hover:opacity-95"
+              style={{ ...investiqButtonStyle("coral"), textDecoration: "none" }}
             >
               I&apos;m freaking out
             </Link>
-            <Link
-              href="/rebalance"
-              className="inline-flex rounded-2xl border px-6 py-3 text-sm"
-              style={{ borderColor: colors.accent, color: colors.accent }}
-            >
+            <Link href="/rebalance" className="hover:opacity-95" style={{ ...investiqOutlineCtaStyle(), textDecoration: "none" }}>
               Run a scenario
             </Link>
           </div>
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
-          <div className="mb-6 flex items-center justify-between">
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-xl">Journey</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {periods.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setPeriod(item)}
-                  className="rounded-full px-4 py-2 text-sm"
-                  style={{
-                    backgroundColor: period === item ? colors.accent : colors.backgroundPanic,
-                    color: period === item ? colors.cardBg : colors.text,
-                  }}
+                  style={investiqFilterChipStyle(period === item)}
                 >
                   {item}
                 </button>
@@ -272,18 +262,15 @@ export default function HomePage() {
           <JourneyAreaChart data={model.chartData} />
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl">Ask Kuber</h2>
           <div className="grid grid-cols-2 gap-3">
             {askKuberQuestions.map((question) => (
               <button
                 key={question}
                 type="button"
-                className="rounded-full px-4 py-3 text-center text-sm"
-                style={{ backgroundColor: colors.backgroundPanic, color: colors.text }}
+                className="w-full text-center"
+                style={{ ...investiqFilterChipStyle(false), padding: "12px 16px", color: colors.text }}
                 onClick={() =>
                   window.dispatchEvent(
                     new CustomEvent("investiq:open-kuber", {
@@ -298,10 +285,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl">What you should know today</h2>
           <div className="space-y-4">
             {model.marketCards.map((card) => (
@@ -320,10 +304,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          className="p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="p-8" style={investiqCardStyle()}>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl">Your holdings</h2>
             <Link href="/current" className="flex items-center gap-1 text-sm hover:underline" style={{ color: colors.accent }}>

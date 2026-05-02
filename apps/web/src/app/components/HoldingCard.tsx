@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../lib/investiqUi";
 
 interface HoldingCardProps {
   id: string;
@@ -16,23 +17,22 @@ interface HoldingCardProps {
 
 export function HoldingCard({ id, name, type, value, fitScore, logo, percentage }: HoldingCardProps) {
   const fitColor = fitScore >= 80 ? colors.green : fitScore >= 60 ? colors.amber : colors.coral;
+  const cardSurface = investiqCardStyle();
 
   return (
     <Link
       href={`/current/${id}`}
-      className="block border-2 p-6 transition-shadow hover:shadow-lg"
+      className="block p-6 text-[color:var(--investiq-text)] no-underline transition-shadow hover:brightness-[1.02]"
       style={{
-        borderColor: fitScore < 80 ? colors.amber : "transparent",
-        borderRadius: radii.xl,
-        boxShadow: shadows.card,
-        backgroundColor: colors.cardBg,
+        ...cardSurface,
+        border: fitScore < 80 ? `2px solid ${colors.amber}` : cardSurface.border,
       }}
     >
       <div className="mb-4 flex items-start justify-between">
         <div className="flex items-start gap-3">
           <div
             className="flex h-10 w-10 items-center justify-center rounded-full text-sm"
-            style={{ backgroundColor: colors.backgroundPanic, color: colors.text }}
+            style={{ backgroundColor: colors.surfaceElevated, color: colors.text }}
           >
             {logo}
           </div>

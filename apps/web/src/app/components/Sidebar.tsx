@@ -51,13 +51,13 @@ export function Sidebar() {
   return (
     <aside
       className="fixed left-0 top-0 z-40 flex h-screen w-60 flex-col border-r"
-      style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
+      style={{ backgroundColor: colors.surfaceElevated, borderColor: colors.border }}
     >
       <div className="p-6">
         <div className="flex items-center gap-2">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
-            style={{ backgroundColor: colors.accent, color: colors.cardBg }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold"
+            style={{ backgroundColor: colors.accent, color: colors.onAccent }}
           >
             IQ
           </div>
@@ -125,8 +125,8 @@ export function Sidebar() {
       <div className="p-4" style={{ borderTop: `1px solid ${colors.border}` }}>
         <div className="mb-3 flex items-center gap-3">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.accent, color: colors.cardBg }}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+            style={{ backgroundColor: colors.accent, color: colors.onAccent }}
           >
             {initials}
           </div>

@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import {
+  investiqButtonStyle,
+  investiqFieldStyle,
+  investiqFilterChipStyle,
+  investiqCardStyle,
+  investiqOnAccentSolidCtaStyle,
+  investiqOnAccentToolbarStyle,
+} from "../../lib/investiqUi";
 import type { MatchCandidate } from "@investiq/engine";
 import { useAuth } from "../components/auth/AuthProvider";
 import { getDashboardData } from "../../lib/supabaseData";
@@ -130,24 +138,33 @@ export default function KuberPage() {
   return (
     <main className="ml-60 min-h-screen">
       <div
-        className="sticky top-0 z-30 flex items-center justify-between px-8 py-3"
-        style={{ backgroundColor: status === "standby" ? colors.textMuted : colors.accent }}
+        className="sticky top-0 z-30 flex items-center justify-between border-b px-8 py-3"
+        style={{
+          backgroundColor: status === "standby" ? colors.surfaceElevated : colors.accent,
+          borderColor: colors.border,
+        }}
       >
-        <div className="flex items-center gap-3" style={{ color: colors.cardBg }}>
-          <span className="text-sm">{status === "standby" ? "Standby" : "Running"}</span>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="text-sm font-semibold" style={{ color: status === "standby" ? colors.text : colors.onAccent }}>
+            {status === "standby" ? "Standby" : "Running"}
+          </span>
           {status === "standby" ? (
-            <span className="text-sm">· Configure your filters to start</span>
+            <span className="truncate text-sm" style={{ color: colors.textMuted }}>
+              · Configure your filters to start
+            </span>
           ) : (
-            <span className="text-sm">· {basket.length} holdings · ${used} of ${budget} used · ${remaining} left</span>
+            <span className="truncate text-sm" style={{ color: `${colors.onAccent}e6` }}>
+              · {basket.length} holdings · ${used} of ${budget} used · ${remaining} left
+            </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setShowFilters(true)}
-            className="flex items-center gap-2 px-4 py-2 text-sm"
-            style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: `${colors.cardBg}22` }}
+            className="flex items-center gap-2"
+            style={status === "standby" ? investiqButtonStyle("secondary", { size: "sm" }) : investiqOnAccentToolbarStyle()}
           >
             <Settings className="h-4 w-4" />
             Filters
@@ -157,8 +174,8 @@ export default function KuberPage() {
             onClick={() => {
               void startDiscovery();
             }}
-            className="flex items-center gap-2 px-4 py-2 text-sm"
-            style={{ borderRadius: radii.md, backgroundColor: colors.cardBg, color: colors.accent }}
+            className="flex items-center gap-2"
+            style={status === "standby" ? investiqButtonStyle("primary", { size: "sm" }) : investiqOnAccentSolidCtaStyle()}
           >
             <Play className="h-4 w-4" />
             Start
@@ -169,24 +186,19 @@ export default function KuberPage() {
       <div className="flex gap-8 px-8 py-8">
         <section className="w-[40%]">
           {basket.length === 0 ? (
-            <div className="p-8" style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}>
+            <div className="p-8" style={investiqCardStyle()}>
               <h2 className="mb-4 text-2xl" style={{ color: colors.text, fontFamily: typography.serif }}>
                 Hi {profileName}. Let&apos;s find new investments.
               </h2>
               <p className="mb-6 text-sm" style={{ color: colors.textMuted }}>
                 You are currently around {equityShare}% in equities. Open Filters, set your budget and preferences, then start discovery.
               </p>
-              <button
-                type="button"
-                onClick={() => setShowFilters(true)}
-                className="w-full py-3 text-sm"
-                style={{ borderRadius: radii.md, backgroundColor: colors.accent, color: colors.cardBg }}
-              >
+              <button type="button" onClick={() => setShowFilters(true)} className="w-full" style={investiqButtonStyle("primary", { fullWidth: true })}>
                 Open Filters
               </button>
             </div>
           ) : (
-            <div className="sticky top-24 p-6" style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}>
+            <div className="sticky top-24 p-6" style={investiqCardStyle()}>
               <h3 className="mb-4 text-lg" style={{ color: colors.text }}>
                 Holdings in your basket
               </h3>
@@ -195,11 +207,11 @@ export default function KuberPage() {
                   <div
                     key={item.id}
                     className="flex items-center gap-3 p-3"
-                    style={{ borderRadius: radii.md, backgroundColor: colors.backgroundPanic }}
+                    style={{ borderRadius: radii.md, backgroundColor: colors.surface, border: `1px solid ${colors.borderSubtle}` }}
                   >
                     <div
                       className="flex h-8 w-8 items-center justify-center text-xs"
-                      style={{ borderRadius: radii.pill, backgroundColor: colors.cardBg }}
+                      style={{ borderRadius: radii.pill, backgroundColor: colors.surfaceElevated }}
                     >
                       {item.logo}
                     </div>
@@ -214,11 +226,7 @@ export default function KuberPage() {
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                className="w-full py-3 text-sm"
-                style={{ borderRadius: radii.md, backgroundColor: colors.accent, color: colors.cardBg }}
-              >
+              <button type="button" className="w-full" style={investiqButtonStyle("primary", { fullWidth: true })}>
                 Review & Confirm
               </button>
             </div>
@@ -251,13 +259,13 @@ export default function KuberPage() {
                 <article
                   key={match.id}
                   className="p-6"
-                  style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
+                  style={investiqCardStyle()}
                 >
                   <div className="mb-4 flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div
                         className="flex h-12 w-12 items-center justify-center text-sm"
-                        style={{ borderRadius: radii.pill, backgroundColor: colors.backgroundPanic }}
+                        style={{ borderRadius: radii.pill, backgroundColor: colors.surfaceElevated }}
                       >
                         {match.logo}
                       </div>
@@ -304,8 +312,8 @@ export default function KuberPage() {
                         const amount = Math.min(100, remaining);
                         setBasket((prev) => [...prev, { id: match.id, name: match.name, logo: match.logo, amount }]);
                       }}
-                      className="flex items-center gap-1 px-4 py-2 text-sm"
-                      style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}
+                      className="flex items-center gap-1"
+                      style={investiqButtonStyle("primary", { size: "sm" })}
                     >
                       <Plus className="h-4 w-4" />
                       Add
@@ -320,11 +328,7 @@ export default function KuberPage() {
 
       {showFilters ? (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            style={{ backgroundColor: `${colors.text}66` }}
-            onClick={() => setShowFilters(false)}
-          />
+          <div className="fixed inset-0 z-40 backdrop-blur-[2px]" style={{ backgroundColor: colors.overlay }} onClick={() => setShowFilters(false)} />
           <aside
             className="fixed right-0 top-0 bottom-0 z-50 w-[400px] overflow-y-auto"
             style={{ backgroundColor: colors.cardBg, boxShadow: shadows.popover }}
@@ -347,13 +351,8 @@ export default function KuberPage() {
                   type="number"
                   value={budget}
                   onChange={(event) => setBudget(Number(event.target.value || 0))}
-                  className="w-full px-4 py-3 text-sm outline-none"
-                  style={{
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: radii.md,
-                    backgroundColor: colors.cardBg,
-                    color: colors.text,
-                  }}
+                  className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--investiq-accent)]/35"
+                  style={investiqFieldStyle()}
                 />
               </div>
 
@@ -374,12 +373,7 @@ export default function KuberPage() {
                     <button
                       key={label}
                       type="button"
-                      className="px-3 py-1.5 text-sm"
-                      style={{
-                        borderRadius: radii.pill,
-                        backgroundColor: colors.backgroundPanic,
-                        color: colors.text,
-                      }}
+                      style={{ ...investiqFilterChipStyle(false), fontSize: "13px", color: colors.text }}
                     >
                       {label}
                     </button>
@@ -392,7 +386,7 @@ export default function KuberPage() {
               className="sticky bottom-0 flex items-center justify-between p-6"
               style={{ borderTop: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}
             >
-              <button type="button" onClick={() => setShowFilters(false)} style={{ color: colors.textMuted }}>
+              <button type="button" onClick={() => setShowFilters(false)} style={investiqButtonStyle("ghost", { size: "sm" })}>
                 Cancel
               </button>
               <button
@@ -401,8 +395,7 @@ export default function KuberPage() {
                   setShowFilters(false);
                   void startDiscovery();
                 }}
-                className="px-6 py-3 text-sm"
-                style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}
+                style={investiqButtonStyle("primary")}
               >
                 Apply & Start
               </button>
