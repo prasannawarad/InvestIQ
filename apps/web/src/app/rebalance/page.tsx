@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import type { RebalanceRecommendation } from "@investiq/data";
 import type { RebalanceSource, ScenarioName, ScenarioResult } from "@investiq/engine";
 import { useAuth } from "../components/auth/AuthProvider";
-import { getDashboardData } from "../../lib/supabaseData";
+import { applyRebalanceCommit } from "../../lib/applyRebalanceCommit";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
+import type { SupabaseDashboardData } from "../../lib/supabaseData";
+import { getDashboardData } from "../../lib/supabaseData";
 
 type Mode = "Drift" | "Scenario" | "Panic";
 
@@ -98,12 +101,24 @@ function resolveTargetAllocation(
 }
 
 export default function RebalancePage() {
+  const router = useRouter();
   const { user } = useAuth();
+  const dashboardRef = useRef<SupabaseDashboardData | null>(null);
+  const recommendationRef = useRef<RebalanceRecommendation | null>(null);
+  const targetAllocationRef = useRef<Record<string, number>>({
+    equity: 0,
+    debt: 0,
+    gold: 0,
+    cash: 0,
+  });
+
   const [mode, setMode] = useState<Mode>("Drift");
   const [selectedScenario, setSelectedScenario] = useState<ScenarioName>("market-drop-20");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [model, setModel] = useState<RebalanceModel | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -182,8 +197,12 @@ export default function RebalancePage() {
         };
 
         if (mounted) {
+          dashboardRef.current = data;
+          recommendationRef.current = recommendation;
+          targetAllocationRef.current = targetAllocation;
           setModel(nextModel);
           setError(null);
+          setCommitError(null);
         }
       } catch (err) {
         if (mounted) {
@@ -211,6 +230,31 @@ export default function RebalancePage() {
   }, [mode, model]);
 
   const hasTrades = (model?.trades.length ?? 0) > 0;
+
+  async function handleConfirmChanges() {
+    if (
+      !(model?.trades.length ?? 0) ||
+      !dashboardRef.current ||
+      !recommendationRef.current ||
+      !user?.id
+    ) {
+      return;
+    }
+    setCommitting(true);
+    setCommitError(null);
+    try {
+      await applyRebalanceCommit(
+        dashboardRef.current,
+        recommendationRef.current,
+        mode === "Drift" ? null : targetAllocationRef.current
+      );
+      router.push("/home");
+    } catch (err) {
+      setCommitError(err instanceof Error ? err.message : "Failed to save portfolio");
+    } finally {
+      setCommitting(false);
+    }
+  }
 
   if (!model) {
     return (
@@ -412,15 +456,27 @@ export default function RebalancePage() {
             </div>
           </div>
 
+          {commitError ? (
+            <p className="mb-4 text-sm" style={{ color: colors.coral }}>
+              {commitError}
+            </p>
+          ) : null}
           <div className="flex items-center gap-4">
             <button
               type="button"
-              className="flex-1 py-3 text-sm"
+              disabled={!hasTrades || committing}
+              onClick={() => void handleConfirmChanges()}
+              className="flex-1 py-3 text-sm disabled:opacity-50"
               style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}
             >
-              Confirm changes
+              {committing ? "Saving..." : "Confirm changes"}
             </button>
-            <button type="button" className="text-sm" style={{ color: colors.textMuted }}>
+            <button
+              type="button"
+              className="text-sm"
+              style={{ color: colors.textMuted }}
+              onClick={() => router.back()}
+            >
               Cancel
             </button>
           </div>
