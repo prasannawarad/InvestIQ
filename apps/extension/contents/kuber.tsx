@@ -258,45 +258,24 @@ function InvestiqBubbleApp({
         await audio.play().catch(teardown);
         return;
       }
+      const errBody = await response.text().catch(() => "");
+      throw new Error(errBody || `Voice request failed with ${response.status}.`);
     } catch {
-      // fallback to Web Speech below
-    }
-
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-
-    function pickVoice() {
-      const voices = synth.getVoices?.() ?? [];
-      return voices.find((voice) => voice.lang?.toLowerCase().startsWith("en")) ?? voices[0];
-    }
-
-    let finished = false;
-    let fallbackTimer: ReturnType<typeof window.setTimeout> | undefined;
-
-    function runSpeak() {
-      if (finished) return;
-      finished = true;
-      synth.removeEventListener("voiceschanged", onVoices);
-      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
-      const utterance = new SpeechSynthesisUtterance(clipped);
-      utterance.rate = 1.02;
-      const voice = pickVoice();
-      if (voice) utterance.voice = voice;
-      synth.speak(utterance);
-    }
-
-    function onVoices() {
-      runSpeak();
-    }
-
-    if (synth.getVoices?.()?.length) {
-      runSpeak();
+      setMessages((previous) => {
+        const patched = [
+          ...previous,
+          {
+            id: `voice-error-${Date.now()}`,
+            speaker: "kuber",
+            text:
+              "Voice playback failed. Browser fallback is disabled here so Kuber stays on the configured ElevenLabs voice only.",
+          } satisfies PanelChatMessage,
+        ];
+        messagesRef.current = patched;
+        return patched;
+      });
       return;
     }
-
-    synth.addEventListener("voiceschanged", onVoices);
-    synth.getVoices();
-    fallbackTimer = window.setTimeout(() => runSpeak(), 650);
   }
 
   /** If another widget hugs the viewport corner, tuck the bubble higher. */
