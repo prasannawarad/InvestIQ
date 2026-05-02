@@ -1,4 +1,7 @@
+import { loadDemoData } from "@investiq/data";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEMO_USER } from "./demoUser";
+import { isDemoUserId, isLocalDemoMode } from "./localDemo";
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -86,6 +89,82 @@ export type SupabaseDashboardData = {
   marketEvents: MarketEventRow[];
 };
 
+async function getLocalDemoDashboardData(): Promise<SupabaseDashboardData> {
+  const { userProfile, portfolio, marketContext } = await loadDemoData();
+
+  return {
+    profile: {
+      id: DEMO_USER.uuid,
+      app_user_id: userProfile.user_id,
+      name: userProfile.identity.name,
+      age: userProfile.identity.age,
+      occupation: userProfile.identity.occupation,
+      location: userProfile.identity.location,
+      currency: userProfile.identity.currency,
+      financial_context: userProfile.financial_context as JsonRecord,
+      risk_profile: userProfile.risk_profile as JsonRecord,
+      preferences: userProfile.preferences as JsonRecord,
+    },
+    goals: userProfile.goals.map((goal) => ({
+      id: goal.goal_id,
+      user_id: DEMO_USER.uuid,
+      external_goal_id: goal.goal_id,
+      name: goal.name,
+      target_amount: goal.target_amount,
+      current_progress: goal.current_progress,
+      target_date: goal.target_date,
+      priority: goal.priority,
+      flexibility: goal.flexibility,
+    })),
+    portfolio: {
+      id: portfolio.portfolio_id,
+      user_id: DEMO_USER.uuid,
+      external_portfolio_id: portfolio.portfolio_id,
+      as_of: portfolio.as_of,
+      currency: portfolio.currency,
+      summary: portfolio.summary as JsonRecord,
+      allocation: portfolio.allocation as JsonRecord,
+      risk_metrics: {},
+    },
+    holdings: portfolio.holdings.map((holding) => ({
+      id: holding.holding_id,
+      portfolio_id: portfolio.portfolio_id,
+      user_id: DEMO_USER.uuid,
+      external_holding_id: holding.holding_id,
+      symbol: holding.symbol,
+      name: holding.name,
+      asset_class: holding.asset_class,
+      subcategory: holding.subcategory,
+      sector: holding.sector,
+      quantity: holding.quantity,
+      avg_buy_price: holding.avg_buy_price,
+      current_price: holding.current_price,
+      current_value: holding.current_value,
+      unrealized_pnl: holding.unrealized_pnl,
+      unrealized_pnl_percent: holding.unrealized_pnl_percent,
+      weight_in_portfolio: holding.weight_in_portfolio,
+      metadata: ((holding as unknown as { metadata?: JsonRecord }).metadata ?? null) as JsonRecord | null,
+    })),
+    marketContext: {
+      id: marketContext.market_context_id,
+      external_market_context_id: marketContext.market_context_id,
+      as_of: marketContext.as_of,
+      market_snapshot: marketContext.market_snapshot as JsonRecord,
+      macro_context: marketContext.macro_context as JsonRecord,
+    },
+    marketEvents: marketContext.recent_events.map((event) => ({
+      id: event.event_id,
+      market_context_id: marketContext.market_context_id,
+      external_event_id: event.event_id,
+      headline: event.headline,
+      category: event.category,
+      impact: event.impact,
+      relevance_to_user: event.relevance_to_user,
+      plain_summary: event.plain_summary,
+    })),
+  };
+}
+
 async function requireData<T>(promise: PromiseLike<{ data: T | null; error: { message: string } | null }>, label: string): Promise<T> {
   const { data, error } = await promise;
   if (error) {
@@ -99,6 +178,10 @@ async function requireData<T>(promise: PromiseLike<{ data: T | null; error: { me
 
 /** Works with browser `supabase` or a `@supabase/ssr` route-handler client with the user session. */
 export async function getDashboardData(client: SupabaseClient, userId: string): Promise<SupabaseDashboardData> {
+  if (isLocalDemoMode && isDemoUserId(userId)) {
+    return getLocalDemoDashboardData();
+  }
+
   const profile = (await requireData(
     client
       .from("profiles")
