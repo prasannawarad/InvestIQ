@@ -1,0 +1,25 @@
+{
+  "name": "investiq",
+  "version": "0.1.0",
+  "private": true,
+  "description": "InvestIQ — portfolio management for beginner investors. Hackathon project.",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "setup:web": "bash scripts/setup-web.sh",
+    "setup:extension": "bash scripts/setup-extension.sh"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.0",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

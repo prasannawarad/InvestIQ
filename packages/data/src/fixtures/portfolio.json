@@ -1,0 +1,151 @@
+{
+  "portfolio_id": "p_001",
+  "user_id": "u_001",
+  "version": "1.0",
+  "as_of": "2026-05-01T09:00:00Z",
+  "currency": "INR",
+
+  "summary": {
+    "total_value": 1875000,
+    "total_invested": 1650000,
+    "total_returns": 225000,
+    "returns_percent": 13.64,
+    "day_change_value": -12500,
+    "day_change_percent": -0.66,
+    "health_score": 72
+  },
+
+  "allocation": {
+    "by_asset_class": {
+      "equity": 65,
+      "debt": 25,
+      "gold": 5,
+      "cash": 5
+    },
+    "by_geography": {
+      "domestic": 90,
+      "international": 10
+    },
+    "target_allocation": {
+      "equity": 60,
+      "debt": 30,
+      "gold": 5,
+      "cash": 5
+    },
+    "drift_from_target": 5
+  },
+
+  "holdings": [
+    {
+      "holding_id": "h_001",
+      "symbol": "HDFCBANK",
+      "name": "HDFC Bank Ltd",
+      "asset_class": "equity",
+      "subcategory": "large_cap",
+      "sector": "financials",
+      "quantity": 50,
+      "avg_buy_price": 1450,
+      "current_price": 1620,
+      "current_value": 81000,
+      "unrealized_pnl": 8500,
+      "unrealized_pnl_percent": 11.72,
+      "weight_in_portfolio": 4.32,
+      "metadata": {
+        "purchase_date": "2024-08-15",
+        "exchange": "NSE"
+      }
+    },
+    {
+      "holding_id": "h_002",
+      "symbol": "NIFTY50_INDEX",
+      "name": "Nifty 50 Index Fund",
+      "asset_class": "equity",
+      "subcategory": "index_fund",
+      "sector": "diversified",
+      "quantity": 1200,
+      "avg_buy_price": 425,
+      "current_price": 478,
+      "current_value": 573600,
+      "unrealized_pnl": 63600,
+      "unrealized_pnl_percent": 12.47,
+      "weight_in_portfolio": 30.59,
+      "metadata": {
+        "expense_ratio": 0.20,
+        "fund_house": "UTI"
+      }
+    },
+    {
+      "holding_id": "h_003",
+      "symbol": "ICICIPRUBLU",
+      "name": "ICICI Prudential Bluechip Fund",
+      "asset_class": "equity",
+      "subcategory": "large_cap_active",
+      "sector": "diversified",
+      "quantity": 8500,
+      "avg_buy_price": 65,
+      "current_price": 78,
+      "current_value": 663000,
+      "unrealized_pnl": 110500,
+      "unrealized_pnl_percent": 20.0,
+      "weight_in_portfolio": 35.36,
+      "metadata": {
+        "expense_ratio": 1.05,
+        "fund_house": "ICICI Prudential"
+      }
+    },
+    {
+      "holding_id": "h_004",
+      "symbol": "HDFC_CORP_BOND",
+      "name": "HDFC Corporate Bond Fund",
+      "asset_class": "debt",
+      "subcategory": "corporate_bond",
+      "sector": "fixed_income",
+      "quantity": 4000,
+      "avg_buy_price": 28,
+      "current_price": 30,
+      "current_value": 120000,
+      "unrealized_pnl": 8000,
+      "unrealized_pnl_percent": 7.14,
+      "weight_in_portfolio": 6.4,
+      "metadata": {
+        "expense_ratio": 0.45,
+        "duration_years": 4.2
+      }
+    },
+    {
+      "holding_id": "h_005",
+      "symbol": "GOLDBEES",
+      "name": "Nippon India Gold ETF",
+      "asset_class": "gold",
+      "subcategory": "gold_etf",
+      "sector": "commodities",
+      "quantity": 200,
+      "avg_buy_price": 425,
+      "current_price": 468,
+      "current_value": 93600,
+      "unrealized_pnl": 8600,
+      "unrealized_pnl_percent": 10.12,
+      "weight_in_portfolio": 4.99,
+      "metadata": {
+        "exchange": "NSE"
+      }
+    }
+  ],
+
+  "risk_metrics": {
+    "portfolio_beta": 0.92,
+    "portfolio_volatility": 14.5,
+    "sharpe_ratio": 0.85,
+    "max_drawdown_1y": -8.2,
+    "concentration_risk": "medium",
+    "diversification_score": 68
+  },
+
+  "extensions": {
+    "tax_lots": [],
+    "transactions": [],
+    "dividends": [],
+    "sip_schedules": [],
+    "alerts": []
+  }
+}

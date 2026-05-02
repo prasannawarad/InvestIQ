@@ -1,0 +1,68 @@
+{
+  "user_id": "u_001",
+  "version": "1.0",
+  "created_at": "2026-05-01T09:00:00Z",
+  "updated_at": "2026-05-01T09:00:00Z",
+
+  "identity": {
+    "name": "Priya Sharma",
+    "age": 38,
+    "occupation": "Schoolteacher",
+    "location": "Pune, India",
+    "currency": "INR"
+  },
+
+  "financial_context": {
+    "annual_income": 850000,
+    "monthly_savings_capacity": 25000,
+    "dependents": 2,
+    "existing_liabilities": [
+      { "type": "home_loan", "outstanding": 1500000, "monthly_emi": 18000 }
+    ],
+    "emergency_fund_months": 3
+  },
+
+  "risk_profile": {
+    "persona": "balanced",
+    "persona_label": "Balanced Ben",
+    "risk_score": 5,
+    "risk_capacity": "medium",
+    "risk_tolerance": "medium",
+    "loss_comfort": "uncomfortable_below_15_percent"
+  },
+
+  "goals": [
+    {
+      "goal_id": "g_001",
+      "name": "House down payment",
+      "target_amount": 2500000,
+      "current_progress": 400000,
+      "target_date": "2029-06-01",
+      "priority": "high",
+      "flexibility": "low"
+    },
+    {
+      "goal_id": "g_002",
+      "name": "Retirement",
+      "target_amount": 30000000,
+      "current_progress": 1200000,
+      "target_date": "2052-01-01",
+      "priority": "high",
+      "flexibility": "medium"
+    }
+  ],
+
+  "preferences": {
+    "communication_tone": "friendly_simple",
+    "explanation_depth": "beginner",
+    "notification_frequency": "weekly",
+    "preferred_language": "english"
+  },
+
+  "extensions": {
+    "tax": {},
+    "esg": {},
+    "behavioral": {},
+    "ai_memory": {}
+  }
+}

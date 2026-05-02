@@ -1,0 +1,38 @@
+{
+  "market_context_id": "mc_001",
+  "as_of": "2026-05-01T09:00:00Z",
+
+  "market_snapshot": {
+    "indices": [
+      { "symbol": "NIFTY50", "value": 24850, "day_change_percent": -0.45 },
+      { "symbol": "SENSEX", "value": 81200, "day_change_percent": -0.38 },
+      { "symbol": "BANKNIFTY", "value": 52400, "day_change_percent": -0.72 }
+    ],
+    "sentiment": "cautious",
+    "volatility_regime": "elevated"
+  },
+
+  "macro_context": {
+    "interest_rate": 6.5,
+    "inflation_rate": 4.8,
+    "gdp_growth_estimate": 6.9,
+    "currency_usd_inr": 84.20
+  },
+
+  "recent_events": [
+    {
+      "event_id": "e_001",
+      "headline": "RBI holds repo rate steady at 6.5%",
+      "category": "monetary_policy",
+      "impact": "neutral",
+      "relevance_to_user": "moderate",
+      "plain_summary": "The central bank kept interest rates unchanged, signaling continued caution on inflation."
+    }
+  ],
+
+  "extensions": {
+    "sector_performance": {},
+    "global_markets": {},
+    "news_feed": []
+  }
+}
