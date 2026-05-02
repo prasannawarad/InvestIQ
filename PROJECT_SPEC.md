@@ -295,11 +295,11 @@ The transparent receipt:
 - Confirm + Cancel buttons
 
 **On Confirm:**
-- Animate trades applying
-- Update in-memory portfolio (React state)
-- Redirect to /home with updated hero sentence
+- (Optional polish) Animate trades applying
+- **Persist to Supabase:** update the user’s `portfolios` row (`as_of`, `summary`, `allocation`, `updated_at`) and each affected `holdings` row (`quantity`, `current_value`, unrealized fields, `weight_in_portfolio`, `updated_at`); remove dust positions. Implementation: `apps/web/src/lib/applyRebalanceCommit.ts` (column subset matches `02_supabase_seed_mock_data.sql`). RLS applies with the browser session.
+- Redirect to `/home` (next load reads updated rows from Supabase)
 
-**Reached from:** top-level nav · /home "Run a scenario" · /panic "Run a scenario" or "I want to do something protective" · floating widget redirect on quantitative questions.
+**Reached from:** top-level nav · /home "Run a scenario" · /panic "Run a scenario" (`/rebalance?source=scenario`) or "I want to do something protective" (`/rebalance?source=panic`) · floating widget redirect on quantitative questions
 
 ### 3.6 /panic
 
@@ -312,8 +312,8 @@ Full-page takeover. NO left nav (just "← Back to Home" link top-left).
 - Subhero: "Most of the time, the right thing to do is nothing." muted gray
 - Three large option cards stacked vertically:
   1. "Show me what's actually happening" → /Kuber-style guidance (actually opens floating widget on /home with pre-filled prompt)
-  2. "Run a scenario" → /rebalance with scenario picker open
-  3. "I want to do something protective" → /rebalance?source=panic
+  2. "Run a scenario" → `/rebalance?source=scenario` (scenario picker / mode pre-selected)
+  3. "I want to do something protective" → `/rebalance?source=panic`
 - No red/orange/amber colors, no exclamation marks, no urgency
 - No floating Kuber widget on this page
 
@@ -610,9 +610,9 @@ If a judge asks "how would you scale?": production Supabase/Postgres hardening o
 5. Tap amber card → /current/[symbol] detail with "How this fits your portfolio" panel
 6. Tap (i) icon → popover with plain explanation
 7. Back to /home → tap "I'm freaking out" → /panic with calm treatment
-8. Tap "Run a scenario" → /rebalance with scenario picker → "What if the market drops 20%?"
-9. /rebalance loads scenario mode. Kuber narrates. Receipt shows engine-computed before/after, two trade cards, line items, Confirm button.
-10. Tap Confirm → animation → /home reloads with updated state
+8. Tap "Run a scenario" → `/rebalance?source=scenario` (scenario mode; picker shows “What if the market drops 20%?” and related scenarios).
+9. `/rebalance` runs the engine client-side (`/api/engine/rebalance`, `/api/engine/scenario` as needed). Narration today is primarily engine-derived text on-page; streamed Kuber + voice is Person 2. Receipt shows engine before/after, trade cards with “why,” tax/fees, goal impact, **Confirm changes**.
+10. Tap **Confirm changes** → Supabase `portfolios` / `holdings` update → navigate to `/home` with data loaded from DB on next fetch.
 11. Bonus path: /Kuber → filters drawer → fill out → Apply & Start → matches appear → +Add → popup → Add to basket → Review & Confirm → /home updated
 
 If steps 3, 9, or 10 break, demo fails. Everything else is recoverable on the fly.

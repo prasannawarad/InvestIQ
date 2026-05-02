@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { startTransition, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
@@ -80,6 +80,21 @@ function scenarioLabel(name: ScenarioName): string {
   return scenarioOptions.find((option) => option.key === name)?.label ?? name;
 }
 
+function isScenarioName(value: string): value is ScenarioName {
+  return scenarioOptions.some((option) => option.key === value);
+}
+
+/** Parses `name` query (e.g. `market-drop-20`) per PROJECT_SPEC deep links. */
+function scenarioFromQuery(raw: string | null): ScenarioName | null {
+  if (raw == null || raw.trim() === "") return null;
+  try {
+    const decoded = decodeURIComponent(raw.trim());
+    return isScenarioName(decoded) ? decoded : null;
+  } catch {
+    return isScenarioName(raw.trim()) ? (raw.trim() as ScenarioName) : null;
+  }
+}
+
 function resolveTargetAllocation(
   mode: Mode,
   scenario: ScenarioName,
@@ -100,8 +115,9 @@ function resolveTargetAllocation(
   return base;
 }
 
-export default function RebalancePage() {
+function RebalancePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const dashboardRef = useRef<SupabaseDashboardData | null>(null);
   const recommendationRef = useRef<RebalanceRecommendation | null>(null);
@@ -119,6 +135,35 @@ export default function RebalancePage() {
   const [error, setError] = useState<string | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
+
+  useEffect(() => {
+    if (!searchParams.has("source") && !searchParams.has("name")) return;
+
+    const sourceRaw = searchParams.get("source");
+    const source = sourceRaw?.toLowerCase().trim() ?? "";
+    const namedScenario = scenarioFromQuery(searchParams.get("name"));
+
+    startTransition(() => {
+      if (source === "panic") {
+        setMode("Panic");
+        setExpanded(null);
+        return;
+      }
+
+      if (source === "scenario") {
+        if (namedScenario) setSelectedScenario(namedScenario);
+        setMode("Scenario");
+        setExpanded(null);
+        return;
+      }
+
+      if (namedScenario) {
+        setSelectedScenario(namedScenario);
+        setMode("Scenario");
+        setExpanded(null);
+      }
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -483,5 +528,19 @@ export default function RebalancePage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function RebalancePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="ml-60 px-8 py-12">
+          <p style={{ color: colors.textMuted }}>Loading rebalance…</p>
+        </main>
+      }
+    >
+      <RebalancePageContent />
+    </Suspense>
   );
 }

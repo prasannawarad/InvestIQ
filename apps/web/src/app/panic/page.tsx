@@ -26,7 +26,7 @@ export default function PanicPage() {
               Show me what&apos;s actually happening
             </Link>
             <Link
-              href="/rebalance"
+              href="/rebalance?source=scenario"
               className="block border p-5 hover:opacity-95"
               style={{ borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.cardBg }}
             >
