@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { loadDemoData } from "@investiq/data";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { HoldingCard } from "../components/HoldingCard";
+import { useAuth } from "../components/auth/AuthProvider";
+import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
 
 type Filter = "All" | "Stocks" | "Funds" | "Bonds" | "Gold";
 
@@ -24,6 +25,8 @@ function toTypeLabel(subcategory: string): string {
     large_cap_active: "Large cap mutual fund",
     corporate_bond: "Corporate bond fund",
     gold_etf: "Gold ETF",
+    bond_etf: "Bond ETF",
+    money_market: "Cash equivalent",
   };
   return map[subcategory] ?? "Diversified holding";
 }
@@ -31,11 +34,19 @@ function toTypeLabel(subcategory: string): string {
 function toFilterBucket(assetClass: string, name: string): Filter {
   if (assetClass === "debt") return "Bonds";
   if (assetClass === "gold") return "Gold";
-  if (name.toLowerCase().includes("fund")) return "Funds";
+  if (name.toLowerCase().includes("fund") || name.toLowerCase().includes("etf")) return "Funds";
   return "Stocks";
 }
 
+function fitFromHolding(holding: HoldingRow): number {
+  if (holding.asset_class === "debt") return 83;
+  if (holding.asset_class === "gold") return 76;
+  if (holding.asset_class === "cash") return 82;
+  return 85;
+}
+
 export default function CurrentPage() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>("All");
   const [rows, setRows] = useState<
     {
@@ -49,22 +60,22 @@ export default function CurrentPage() {
       bucket: Filter;
     }[]
   >([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     async function init() {
-      const { portfolio } = await loadDemoData();
-      const mapped = portfolio.holdings.map((holding) => {
-        const fitScore =
-          holding.symbol === "ICICIPRUBLU" ? 78 : holding.asset_class === "debt" ? 82 : holding.asset_class === "gold" ? 76 : 85;
+      if (!user?.id) return;
 
-        return {
+      try {
+        const data = await getDashboardData(user.id);
+        const mapped = data.holdings.map((holding) => ({
           id: holding.symbol,
           name: holding.name,
           type: toTypeLabel(holding.subcategory),
           value: toCurrency(holding.current_value),
-          fitScore,
+          fitScore: fitFromHolding(holding),
           logo: holding.name
             .split(" ")
             .slice(0, 2)
@@ -73,11 +84,16 @@ export default function CurrentPage() {
             .toUpperCase(),
           percentage: `${Math.round(holding.weight_in_portfolio)}%`,
           bucket: toFilterBucket(holding.asset_class, holding.name),
-        };
-      });
+        }));
 
-      if (mounted) {
-        setRows(mapped);
+        if (mounted) {
+          setRows(mapped);
+          setError(null);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Failed to load holdings");
+        }
       }
     }
 
@@ -85,7 +101,7 @@ export default function CurrentPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   const filtered = useMemo(() => {
     if (filter === "All") return rows;
@@ -97,6 +113,12 @@ export default function CurrentPage() {
       <h1 className="mb-8 text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
         Your holdings
       </h1>
+
+      {error ? (
+        <div className="mb-6 text-sm" style={{ color: colors.coral }}>
+          {error}
+        </div>
+      ) : null}
 
       <div className="mb-8 flex gap-3">
         {filters.map((item) => (

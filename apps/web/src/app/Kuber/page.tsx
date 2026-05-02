@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { useAuth } from "../components/auth/AuthProvider";
+import { getDashboardData } from "../../lib/supabaseData";
 
 type Status = "standby" | "running";
 
@@ -62,12 +64,41 @@ const matches: Match[] = [
   },
 ];
 
+function getFirstName(fullName: string | null | undefined): string {
+  const name = fullName?.trim();
+  if (!name) return "there";
+  return name.split(/\s+/)[0] ?? "there";
+}
+
 export default function KuberPage() {
+  const { user } = useAuth();
   const [status, setStatus] = useState<Status>("standby");
   const [showFilters, setShowFilters] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [basket, setBasket] = useState<{ id: string; name: string; logo: string; amount: number }[]>([]);
   const [budget, setBudget] = useState(500);
+  const [profileName, setProfileName] = useState(getFirstName(user?.user_metadata?.full_name));
+  const [equityShare, setEquityShare] = useState(65);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function init() {
+      if (!user?.id) return;
+      const data = await getDashboardData(user.id);
+      if (!mounted) return;
+      const byAsset = (data.portfolio.allocation as Record<string, unknown>).by_asset_class as Record<string, number>;
+      const monthlySavings = Number((data.profile.financial_context as Record<string, unknown>).monthly_savings_capacity ?? 500);
+      setProfileName(getFirstName(data.profile.name));
+      setBudget(Math.max(300, Math.min(2000, Math.round(monthlySavings * 0.02))));
+      setEquityShare(Math.round(Number(byAsset?.equity ?? 65)));
+    }
+
+    void init();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   const used = useMemo(() => basket.reduce((sum, item) => sum + item.amount, 0), [basket]);
   const remaining = Math.max(0, budget - used);
@@ -114,10 +145,10 @@ export default function KuberPage() {
           {basket.length === 0 ? (
             <div className="p-8" style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}>
               <h2 className="mb-4 text-2xl" style={{ color: colors.text, fontFamily: typography.serif }}>
-                Hi Priya. Let&apos;s find new investments.
+                Hi {profileName}. Let&apos;s find new investments.
               </h2>
               <p className="mb-6 text-sm" style={{ color: colors.textMuted }}>
-                Open Filters, set your budget and preferences, then start discovery.
+                You are currently around {equityShare}% in equities. Open Filters, set your budget and preferences, then start discovery.
               </p>
               <button
                 type="button"
@@ -293,27 +324,36 @@ export default function KuberPage() {
                   Industry / Sector
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {["Tech", "Finance", "Healthcare", "Energy", "Consumer", "Real Estate", "Industrials"].map(
-                    (label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        className="px-3 py-1.5 text-sm"
-                        style={{
-                          borderRadius: radii.pill,
-                          backgroundColor: colors.backgroundPanic,
-                          color: colors.text,
-                        }}
-                      >
-                        {label}
-                      </button>
-                    )
-                  )}
+                  {[
+                    "Tech",
+                    "Finance",
+                    "Healthcare",
+                    "Energy",
+                    "Consumer",
+                    "Real Estate",
+                    "Industrials",
+                  ].map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="px-3 py-1.5 text-sm"
+                      style={{
+                        borderRadius: radii.pill,
+                        backgroundColor: colors.backgroundPanic,
+                        color: colors.text,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex items-center justify-between p-6" style={{ borderTop: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+            <div
+              className="sticky bottom-0 flex items-center justify-between p-6"
+              style={{ borderTop: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}
+            >
               <button type="button" onClick={() => setShowFilters(false)} style={{ color: colors.textMuted }}>
                 Cancel
               </button>

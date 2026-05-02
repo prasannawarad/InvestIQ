@@ -12,10 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { loadDemoData } from "@investiq/data";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { HoldingCard } from "../components/HoldingCard";
 import { StatCard } from "../components/StatCard";
+import { useAuth } from "../components/auth/AuthProvider";
+import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
 
 const askKuberQuestions = [
   "Am I at risk?",
@@ -39,8 +40,9 @@ function summarizeHoldingType(subcategory: string): string {
     large_cap: "Big established company",
     index_fund: "Broad market fund",
     large_cap_active: "Large cap mutual fund",
-    corporate_bond: "Corporate bond fund",
+    bond_etf: "Bond ETF",
     gold_etf: "Gold ETF",
+    money_market: "Cash equivalent",
   };
   return map[subcategory] ?? "Diversified holding";
 }
@@ -52,6 +54,7 @@ function buildJourneyData(totalValue: number) {
 }
 
 type HomeModel = {
+  profileName: string;
   totalValue: string;
   dayChangeValue: string;
   dayChangePercent: string;
@@ -76,75 +79,92 @@ type HomeModel = {
   }[];
 };
 
+function fitFromHolding(holding: HoldingRow): number {
+  if (holding.symbol === "ICICIPRUBLU") return 78;
+  if (holding.asset_class === "debt") return 83;
+  if (holding.asset_class === "gold") return 76;
+  if (holding.asset_class === "cash") return 82;
+  return 85;
+}
+
 export default function HomePage() {
+  const { user } = useAuth();
   const [period, setPeriod] = useState("1Y");
   const [model, setModel] = useState<HomeModel | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
     async function init() {
-      const { portfolio, marketContext } = await loadDemoData();
-      const dayChangePercent = Number(portfolio.summary.day_change_percent ?? 0);
+      if (!user?.id) return;
 
-      const dayChangeType: "positive" | "negative" | "neutral" =
-        dayChangePercent > 0
-          ? "positive"
-          : dayChangePercent <= -2
-            ? "negative"
-            : "neutral";
+      try {
+        const data = await getDashboardData(user.id);
+        const summary = data.portfolio.summary as Record<string, number>;
+        const dayChangePercent = Number(summary.day_change_percent ?? 0);
 
-      const healthScore = Number(portfolio.summary.health_score ?? 0);
-      const healthVerdict = healthScore >= 80 ? "Strong" : healthScore >= 70 ? "Good" : "Needs attention";
+        const dayChangeType: "positive" | "negative" | "neutral" =
+          dayChangePercent > 0 ? "positive" : dayChangePercent <= -2 ? "negative" : "neutral";
 
-      const topHoldings = portfolio.holdings.slice(0, 3).map((holding) => ({
-        id: holding.symbol,
-        name: holding.name,
-        type: summarizeHoldingType(holding.subcategory),
-        value: formatCurrency(Number(holding.current_value ?? 0)),
-        fitScore: holding.symbol === "ICICIPRUBLU" ? 78 : holding.weight_in_portfolio >= 25 ? 88 : 84,
-        logo: holding.name
-          .split(" ")
-          .slice(0, 2)
-          .map((part) => part[0])
-          .join("")
-          .toUpperCase(),
-        percentage: `${Math.round(Number(holding.weight_in_portfolio ?? 0))}%`,
-      }));
+        const healthScore = Number(summary.health_score ?? 0);
+        const healthVerdict = healthScore >= 80 ? "Strong" : healthScore >= 70 ? "Good" : "Needs attention";
 
-      const cards = marketContext.recent_events.slice(0, 2).map((event, index) => ({
-        headline: event.headline,
-        summary: event.plain_summary,
-        connector:
-          index === 0
-            ? "This directly relates to your diversified equity + debt mix today."
-            : "This is a watch item; your current allocation already cushions shocks.",
-        borderColor: index === 0 ? colors.accent : colors.amber,
-      }));
+        const topHoldings = data.holdings.slice(0, 3).map((holding) => ({
+          id: holding.symbol,
+          name: holding.name,
+          type: summarizeHoldingType(holding.subcategory),
+          value: formatCurrency(Number(holding.current_value ?? 0)),
+          fitScore: fitFromHolding(holding),
+          logo: holding.name
+            .split(" ")
+            .slice(0, 2)
+            .map((part) => part[0])
+            .join("")
+            .toUpperCase(),
+          percentage: `${Math.round(Number(holding.weight_in_portfolio ?? 0))}%`,
+        }));
 
-      while (cards.length < 2) {
-        cards.push({
-          headline: "Markets remain range-bound",
-          summary: "No major structural change today; normal short-term volatility is expected.",
-          connector: "Your current portfolio mix remains aligned to your goals.",
-          borderColor: cards.length === 0 ? colors.accent : colors.amber,
-        });
-      }
+        const cards = data.marketEvents.slice(0, 2).map((event, index) => ({
+          headline: event.headline,
+          summary: event.plain_summary,
+          connector:
+            index === 0
+              ? "This directly relates to your diversified equity + debt mix today."
+              : "This is a watch item; your current allocation already cushions shocks.",
+          borderColor: index === 0 ? colors.accent : colors.amber,
+        }));
 
-      const nextModel: HomeModel = {
-        totalValue: formatCurrency(Number(portfolio.summary.total_value ?? 0)),
-        dayChangeValue: formatCurrency(Math.abs(Number(portfolio.summary.day_change_value ?? 0))),
-        dayChangePercent: `${Math.abs(dayChangePercent).toFixed(2)}%`,
-        dayChangeType,
-        healthScore,
-        healthVerdict,
-        chartData: buildJourneyData(Number(portfolio.summary.total_value ?? 0)),
-        holdings: topHoldings,
-        marketCards: cards,
-      };
+        while (cards.length < 2) {
+          cards.push({
+            headline: "Markets remain range-bound",
+            summary: "No major structural change today; normal short-term volatility is expected.",
+            connector: "Your current portfolio mix remains aligned to your goals.",
+            borderColor: cards.length === 0 ? colors.accent : colors.amber,
+          });
+        }
 
-      if (mounted) {
-        setModel(nextModel);
+        const nextModel: HomeModel = {
+          profileName: data.profile.name,
+          totalValue: formatCurrency(Number(summary.total_value ?? 0)),
+          dayChangeValue: formatCurrency(Math.abs(Number(summary.day_change_value ?? 0))),
+          dayChangePercent: `${Math.abs(dayChangePercent).toFixed(2)}%`,
+          dayChangeType,
+          healthScore,
+          healthVerdict,
+          chartData: buildJourneyData(Number(summary.total_value ?? 0)),
+          holdings: topHoldings,
+          marketCards: cards,
+        };
+
+        if (mounted) {
+          setModel(nextModel);
+          setError(null);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Failed to load home data");
+        }
       }
     }
 
@@ -152,7 +172,7 @@ export default function HomePage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user?.id]);
 
   const dayChangeLabel = useMemo(() => {
     if (!model) return "-";
@@ -160,11 +180,21 @@ export default function HomePage() {
     return `${sign}${model.dayChangeValue}`;
   }, [model]);
 
+  if (error) {
+    return (
+      <main className="ml-60 px-8 py-12">
+        <div className="text-sm" style={{ color: colors.coral }}>
+          {error}
+        </div>
+      </main>
+    );
+  }
+
   if (!model) {
     return (
       <main className="ml-60 px-8 py-12">
         <div className="text-sm" style={{ color: colors.textMuted }}>
-          Loading Priya&apos;s portfolio...
+          Loading your portfolio...
         </div>
       </main>
     );

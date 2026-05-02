@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Mic, Send, X } from "lucide-react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { useAuth } from "./auth/AuthProvider";
 
 const chipGroups = [
   {
@@ -30,11 +31,19 @@ interface Message {
   content: string;
 }
 
+function getFirstName(fullName: string | null | undefined): string {
+  const name = fullName?.trim();
+  if (!name) return "there";
+  return name.split(/\s+/)[0] ?? "there";
+}
+
 export function FloatingKuber() {
+  const { user } = useAuth();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const firstName = getFirstName(user?.user_metadata?.full_name);
 
   const isHiddenRoute = useMemo(() => {
     return (
@@ -105,7 +114,7 @@ export function FloatingKuber() {
         {chatMessages.length === 0 ? (
           <div className="space-y-4">
             <div className="mb-6 text-center" style={{ fontFamily: typography.serif, color: colors.text }}>
-              Hi Priya. What can I help with?
+              Hi {firstName}. What can I help with?
             </div>
             {chipGroups.map((group) => (
               <div key={group.label}>
