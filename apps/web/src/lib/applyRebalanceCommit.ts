@@ -153,7 +153,7 @@ export async function applyRebalanceCommit(
     h.current_price = round2(h.current_price);
   }
 
-  let { total_value, by_asset_class } = recomputePortfolioAggregates(holdings);
+  const { total_value, by_asset_class } = recomputePortfolioAggregates(holdings);
   const prevPortfolio = data.portfolio;
 
   const prevAlloc = asRecord(prevPortfolio.allocation);
@@ -178,7 +178,7 @@ export async function applyRebalanceCommit(
 
   const prevSummary = asRecord(prevPortfolio.summary);
 
-  let total_invested = round2(
+  const total_invested = round2(
     holdings.reduce((s, h) => s + round2(h.quantity * h.avg_buy_price), 0)
   );
   const total_returns = round2(total_value - total_invested);

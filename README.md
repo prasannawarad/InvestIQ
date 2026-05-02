@@ -7,6 +7,7 @@ The product helps non-savvy users track investments, understand risk, and rebala
 ## Stack
 
 - **Web app** — Next.js 16 (App Router) + TypeScript + Tailwind + shadcn/ui + Recharts
+- **UI polish layer** — `framer-motion` (motion, staggered dashboards, floating Kuber sheet) + `sonner` toasts themed to `@investiq/ui` CSS variables — same “component marketplace” vibe as curated registries without vendor lock-in; swap in pasted blocks from [21st.dev](https://21st.dev) anytime if you paste code that respects `tokens.ts`
 - **Extension** — Plasmo (Chrome MV3, React)
 - **LLM** — Groq (Llama 3.3 70B), OpenAI-compatible API
 - **Voice** — Browser Web Speech API for STT, ElevenLabs streaming for TTS (Daniel voice, `eleven_turbo_v2_5`)

@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { AppShell } from "./components/auth/AppShell";
 import { AuthProvider } from "./components/auth/AuthProvider";
+import { InvestiqToaster } from "./components/investiq/InvestiqToaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({
       >
         <div className="min-h-screen bg-[var(--investiq-bg)] text-[var(--investiq-text)]">
           <AuthProvider>
+            <InvestiqToaster />
             <AppShell>{children}</AppShell>
           </AuthProvider>
         </div>

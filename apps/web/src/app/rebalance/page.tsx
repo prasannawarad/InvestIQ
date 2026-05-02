@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { toast } from "sonner";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import type { RebalanceRecommendation } from "@investiq/data";
 import type { RebalanceSource, ScenarioName, ScenarioResult } from "@investiq/engine";
@@ -12,6 +13,8 @@ import { applyRebalanceCommit } from "../../lib/applyRebalanceCommit";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 import type { SupabaseDashboardData } from "../../lib/supabaseData";
 import { getDashboardData } from "../../lib/supabaseData";
+import { KuberOrb } from "../components/investiq/KuberOrb";
+import { ScenarioLiveSlider } from "../components/investiq/ScenarioLiveSlider";
 
 type Mode = "Drift" | "Scenario" | "Panic";
 
@@ -75,6 +78,19 @@ const scenarioOptions: Array<{ key: ScenarioName; label: string }> = [
   { key: "withdraw-20-percent", label: "Withdraw 20%" },
   { key: "lose-job-need-emergency", label: "Job loss emergency" },
 ];
+
+const scenarioStepOrder = scenarioOptions.map((o) => o.key);
+
+function scenarioCushionPreviewUsd(total: number, scenario: ScenarioName): number {
+  const f: Partial<Record<ScenarioName, number>> = {
+    "market-drop-20": 0.041,
+    "market-drop-30": 0.056,
+    "inflation-stays-high": 0.048,
+    "withdraw-20-percent": 0.062,
+    "lose-job-need-emergency": 0.071,
+  };
+  return Math.round(total * (f[scenario] ?? 0.045));
+}
 
 function scenarioLabel(name: ScenarioName): string {
   return scenarioOptions.find((option) => option.key === name)?.label ?? name;
@@ -293,7 +309,10 @@ function RebalancePageContent() {
         recommendationRef.current,
         mode === "Drift" ? null : targetAllocationRef.current
       );
-      router.push("/home");
+      toast.success("Trades saved", {
+        description: "Kuber updated your portfolio in Supabase. Heading home…",
+      });
+      setTimeout(() => router.push("/home"), 560);
     } catch (err) {
       setCommitError(err instanceof Error ? err.message : "Failed to save portfolio");
     } finally {
@@ -363,16 +382,26 @@ function RebalancePageContent() {
               ))}
             </div>
           ) : null}
+          {mode === "Scenario" ? (
+            <div className="mt-6 max-w-xl">
+              <ScenarioLiveSlider
+                scenarioOrder={scenarioStepOrder}
+                scenarios={scenarioOptions}
+                selected={selectedScenario}
+                portfolioTotalUsd={model.totalBefore}
+                previewMoveToCashUsd={scenarioCushionPreviewUsd(model.totalBefore, selectedScenario)}
+                onSelect={(name) => {
+                  setExpanded(null);
+                  setSelectedScenario(name);
+                }}
+              />
+            </div>
+          ) : null}
         </header>
 
         <section className="mb-8 p-6" style={{ borderRadius: radii.xl, backgroundColor: colors.backgroundPanic }}>
           <div className="flex items-start gap-4">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center"
-              style={{ borderRadius: radii.pill, backgroundColor: colors.accent, color: colors.cardBg }}
-            >
-              K
-            </div>
+            <KuberOrb size="sm" className="-mt-2" />
             <p className="leading-relaxed" style={{ color: colors.text }}>
               {narration}
             </p>
@@ -401,7 +430,15 @@ function RebalancePageContent() {
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={model.beforeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
+                  <Pie
+                    animationDuration={800}
+                    data={model.beforeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
                     {model.beforeData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
@@ -422,7 +459,15 @@ function RebalancePageContent() {
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={model.afterData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
+                  <Pie
+                    animationDuration={900}
+                    data={model.afterData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
                     {model.afterData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
