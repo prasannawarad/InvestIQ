@@ -47,6 +47,9 @@ function shouldInjectOnCurrentPage(): boolean {
   const host = current.hostname.toLowerCase();
   const port = current.port;
   if ((host === "localhost" || host === "127.0.0.1") && port === "3000") return false;
+  // Safety net for deployed InvestIQ pages in case APP_URL env is stale/missing.
+  if (host === "invest-iq-kuber.netlify.app") return false;
+  if (/^invest-iq.*\.netlify\.app$/.test(host)) return false;
 
   return true;
 }
