@@ -1,0 +1,42 @@
+{
+  "market_context_id": "mc_001",
+  "as_of": "2026-05-01T09:00:00Z",
+
+  "market_snapshot": {
+    "indices": [
+      { "symbol": "S&P 500", "value": 5825, "day_change_percent": -0.18 },
+      { "symbol": "Nasdaq", "value": 18420, "day_change_percent": -0.42 },
+      { "symbol": "Dow", "value": 42180, "day_change_percent": 0.06 }
+    ],
+    "sentiment": "cautious",
+    "volatility_regime": "elevated"
+  },
+
+  "macro_context": {
+    "fed_funds_rate": 4.25,
+    "inflation_rate_cpi": 2.9,
+    "unemployment_rate": 4.1,
+    "10y_treasury_yield": 4.35
+  },
+
+  "recent_events": [
+    {
+      "headline": "Fed holds rates steady, signals one more cut likely in 2026",
+      "category": "monetary_policy",
+      "impact": "neutral",
+      "plain_summary": "The Fed left interest rates where they are, and hinted that one small rate cut may come later this year — mildly good for bonds, no urgent action for most people."
+    },
+    {
+      "headline": "Tech sector rally pauses as AI chip valuations face scrutiny",
+      "category": "sector_news",
+      "impact": "negative",
+      "plain_summary": "AI-heavy tech stocks like NVIDIA are taking a breather after a long run up — investors are asking if prices got ahead of themselves. Normal pullback, not a crash."
+    },
+    {
+      "headline": "Q1 GDP beats estimates at 2.8% growth",
+      "category": "economic_data",
+      "impact": "positive",
+      "plain_summary": "The US economy grew a bit faster than expected this quarter — quietly good news, suggesting we're avoiding a sharp slowdown."
+    }
+  ]
+}
