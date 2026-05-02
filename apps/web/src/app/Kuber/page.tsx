@@ -54,7 +54,6 @@ const INDUSTRY_OPTIONS: { label: string; slug: string }[] = [
 ];
 
 type SizeSlug = "small" | "medium" | "large";
-
 const SIZE_OPTIONS: { label: string; slug: SizeSlug }[] = [
   { label: "Small", slug: "small" },
   { label: "Medium", slug: "medium" },
@@ -265,9 +264,9 @@ export default function KuberPage() {
   const remaining = Math.max(0, budget - used);
 
   return (
-    <main className="ml-60 min-h-screen">
+    <main className="min-h-screen md:ml-60">
       <div
-        className="sticky top-0 z-30 flex items-center justify-between border-b px-8 py-3"
+        className="sticky top-0 z-30 flex items-center justify-between border-b px-4 py-3 sm:px-6 md:px-8"
         style={{
           backgroundColor: status === "standby" ? colors.surfaceElevated : colors.accent,
           borderColor: colors.border,
@@ -315,18 +314,18 @@ export default function KuberPage() {
       </div>
 
       {!user?.id ? (
-        <p className="mx-8 mt-6 text-sm" style={{ color: colors.coral }}>
+        <p className="mx-4 mt-6 text-sm sm:mx-6 md:mx-8" style={{ color: colors.coral }}>
           Sign in — discovery reads your allocations and persists new holdings to Supabase after confirm.
         </p>
       ) : (
-        <p className="mx-8 mt-4 text-xs" style={{ color: colors.textMuted }}>
+        <p className="mx-4 mt-4 text-xs sm:mx-6 md:mx-8" style={{ color: colors.textMuted }}>
           Matches = deterministic <code>generateMatches</code> inside <code>@investiq/engine</code>. Kubers <em>dialogue</em> still runs on Groq
           elsewhere; this surface only consumes engine JSON plus your filters.
         </p>
       )}
 
-      <div className="flex gap-8 px-8 py-8">
-        <section className="w-[40%]">
+      <div className="flex flex-col gap-8 px-4 py-8 sm:px-6 md:px-8 lg:flex-row">
+        <section className="w-full lg:w-[40%]">
           {basket.length === 0 ? (
             <div className="p-8" style={investiqCardStyle()}>
               <h2 className="mb-4 text-2xl" style={{ color: colors.text, fontFamily: typography.serif }}>
@@ -382,7 +381,7 @@ export default function KuberPage() {
           )}
         </section>
 
-        <section className="w-[60%]">
+        <section className="w-full lg:w-[60%]">
           <h3 className="mb-6 text-xl" style={{ color: colors.text }}>
             Top matches
           </h3>

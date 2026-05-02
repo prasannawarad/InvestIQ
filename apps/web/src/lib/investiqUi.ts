@@ -137,8 +137,9 @@ export function investiqCardStyle(): CSSProperties {
   return {
     borderRadius: radii.xl,
     backgroundColor: colors.cardBg,
-    border: `1px solid ${colors.cardBorder}`,
-    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03), 0 20px 50px rgba(0,0,0,0.35)`,
+    backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${colors.surfaceElevated} 34%, ${colors.cardBg}) 0%, ${colors.cardBg} 58%, color-mix(in srgb, ${colors.background} 55%, ${colors.cardBg}) 100%)`,
+    border: `1px solid color-mix(in srgb, ${colors.cardBorder} 78%, white)`,
+    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.045), inset 0 -1px 0 rgba(0,0,0,0.35), 0 18px 46px rgba(0,0,0,0.42)`,
   };
 }
 

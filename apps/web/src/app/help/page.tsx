@@ -24,7 +24,7 @@ export default function HelpPage() {
   const [fOpen, setFOpen] = useState<number | null>(null);
 
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[800px]">
         <h1 className="mb-8 text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
           Help Center
