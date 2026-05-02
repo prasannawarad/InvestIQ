@@ -1,15 +1,18 @@
 node_modules/
 **/node_modules/
-
+.turbo/
 .DS_Store
 
+# Generated app/build output
 .next/
 dist/
 dist-test/
 build/
+.plasmo/
 coverage/
 *.tsbuildinfo
 
+# Environment files
 *.log
 .env
 .env.local
