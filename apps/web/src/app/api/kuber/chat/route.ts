@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
 import { chat, type ChatMessage, type KuberContext } from "@investiq/kuber";
+import type { MarketContext, Portfolio, UserProfile } from "@investiq/data";
+import demoUserProfile from "@investiq/data/fixtures/user_profile.json";
+import demoPortfolio from "@investiq/data/fixtures/portfolio.json";
+import demoMarketContext from "@investiq/data/fixtures/market_context.json";
 import {
   mapDashboardToMarketContext,
   mapDashboardToPortfolio,
@@ -64,6 +68,14 @@ async function resolveKuberContext(
   }
 }
 
+function demoFallbackContext(): KuberContext {
+  return {
+    userProfile: demoUserProfile as UserProfile,
+    portfolio: demoPortfolio as Portfolio,
+    marketContext: demoMarketContext as MarketContext,
+  };
+}
+
 export async function POST(request: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;
   const model = process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
@@ -107,13 +119,26 @@ export async function POST(request: NextRequest) {
     userId = null;
   }
 
-  const kuberCore = await resolveKuberContext(userId);
+  let kuberCore = await resolveKuberContext(userId);
+  const usingDemoFallback = !kuberCore && embedReading;
+  if (usingDemoFallback) {
+    kuberCore = demoFallbackContext();
+  }
   const readingBlock = readingSupplement(embedReading, body.context);
 
   const supplemental: string[] = [];
   if (!kuberCore) {
     supplemental.push(
       "AUTHENTICATION NOTE: No Supabase portfolio snapshot for this HTTP request (common for the cross-origin extension). Do not invent specific holdings, weights, or dollar amounts. Use reading context if present; otherwise give general beginner guidance.",
+    );
+  } else {
+    supplemental.push(
+      "PORTFOLIO GROUNDING RULE: If user asks about a company/ticker, first check holdings in CONTEXT. If already owned (e.g., AAPL), explicitly say they already hold it and reference its approximate portfolio weight/current value from CONTEXT before giving guidance.",
+    );
+  }
+  if (usingDemoFallback) {
+    supplemental.push(
+      "CONTEXT NOTE: This request has no authenticated Supabase cookie; using InvestIQ demo profile/portfolio fallback for continuity. Treat amounts/holdings as demo data unless user session confirms otherwise.",
     );
   }
   if (readingBlock) supplemental.push(readingBlock);
