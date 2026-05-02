@@ -35,7 +35,7 @@ investiq/
 
 | Person | Owns | Day 1 task |
 |---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Mostly shipped. **Remaining:** persist **`/settings`** Save to Supabase. |
+| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | **`/settings` Save → Supabase** (tone, notifications, risk, voice flag). |
 | 2 — Kuber | `packages/kuber`, floating widget + extension chat, voice pipeline | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
 | 3 — Engine | `packages/engine`, **`/rebalance`** (drift / scenario / panic), engine API routes, Supabase commit on Confirm | **Shipped** in repo (optional: streaming LLM narration on `/rebalance`). |
 | 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Extension shipped: draggable bubble + `KuberPanel`, `/extension` page, `/api/kuber/chat` (+ speak). **Remaining:** execute `DEMO.md` demo-day rules (backup recording, locked profile, dry runs). |
@@ -46,8 +46,8 @@ Tracked against the codebase (not optimism):
 
 | Person | Done in repo | Remaining |
 |---|---|---|
-| **1 — Shell** | `/home`, `/current`, `[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`, Supabase-backed dashboard flows, **`/extension` explainer page** (with Person 4) | **`/settings`:** Save must **persist** to Supabase; today the page loads prefs but **Save is not wired** (`apps/web/src/app/settings/page.tsx`). |
-| **2 — Kuber** | **Shipped:** `packages/kuber` Groq streams + **`serialize-context`/`demo-responses`**, **`/api/kuber/chat`** (SSE + Supabase-backed session), **`/narrate`**, **`/jargon`**, **`/speak`**, floating chips hide + **`/rebalance` intent routing**, holding-detail jargon popovers, AI narration overlay on **`/rebalance`**. Requires **`GROQ_API_KEY`** (+ optional **`ELEVENLABS_*`**); Supabase **`NEXT_PUBLIC_*`** for portfolio context via `@supabase/ssr` cookies. |
+| **1 — Shell** | `/home`, `/current`, `[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`, **`/settings` Save → Supabase** (prefs JSON + risk_profile), **`/extension` explainer page** (with Person 4) | — |
+| **2 — Kuber** | **Shipped:** `packages/kuber` Groq streams + **`serialize-context`/`demo-responses`**, **system prompt** from `packages/kuber/src/prompts/kuber-agent-system.ts` (adapted from `agent/recommendation_agent.py`; Regenerate/edit by replacing Python `SYSTEM_PROMPT` or patching that file). **`/api/kuber/chat`** (SSE + Supabase-backed session), **`/narrate`**, **`/jargon`**, **`/speak`**, floating chips + **`/rebalance` intent routing**, holding jargon popovers, AI narration on **`/rebalance`**. Requires **`GROQ_API_KEY`** (+ optional **`ELEVENLABS_*`**); Supabase **`NEXT_PUBLIC_*`** for portfolio context via `@supabase/ssr` cookies. |
 | **3 — Engine** | `packages/engine` + tests, `/api/engine/*`, `/rebalance` (drift / scenario / panic), receipt, **Confirm → Supabase**, query-param deep links, **“Why”** on trade rows | Optional: **streaming LLM** narration on `/rebalance` (deterministic copy + `KuberOrb` today). |
 | **4 — Extension** | Plasmo MV3 app, content script, popup, contextual chat posting to deployed API | **Process only:** own **`DEMO.md`** demo-day checklist — **recorded backup video**, locked demo Chrome profile, group practice, no live ad-lib Kuber. |
 
@@ -87,7 +87,7 @@ After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/w
 - **End of Day 2:** Person 1's /home + Person 2's chat working together on a real Kuber question with Groq.
 - **End of Day 3:** Person 3's rebalance engine output flowing through Person 2's narrator into Person 4's /panic flow.
 - **Person 3 (engine + /rebalance):** Shipped in code; optional polish = streaming LLM narration on `/rebalance` (Person 2).
-- **Open gaps before judges:** Person 1 = **Settings save → Supabase**. Person 4 = **`DEMO.md`** execution (backup video + dry runs). See **Implementation status** table above.
+- **Open gaps before judges:** Person 4 = **`DEMO.md`** execution (backup video + dry runs). See **Implementation status** table above.
 
 ## Demo
 

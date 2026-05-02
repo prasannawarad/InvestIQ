@@ -80,7 +80,7 @@ If `pnpm dev` fails: Node ≥20, pnpm ≥9, then `pnpm install` again.
 
 **Remaining scope (explicit):**
 
-- **Person 1:** **`/settings` Save → Supabase** (`settings/page.tsx` loads prefs only).
+- **Person 1:** **`/settings` Save → Supabase** (wired: tone, notifications, risk_profile, `kuber_voice_enabled` in `preferences`).
 - **Person 4:** **Execute `DEMO.md`** demo-day rules (§11 ties to Person 4 for the recording).
 
 ---
@@ -172,7 +172,7 @@ Don't upgrade mid-hackathon. If a dep breaks, downgrade and fix forward.
 
 ## 11. When the demo gets close
 
-Repo status recap: Person 3 rebalance path is coded; Person 4 extension ships; Person 1 must wire **`/settings` persistence** before claiming full shell completeness. Judges care about **`DEMO.md`** fidelity — Person 4 still owns **recording + profile lock** regardless of feature completeness.
+Repo status recap: Person 3 rebalance path is coded; Person 4 extension ships; **`/settings` persistence is wired.** Judges care about **`DEMO.md`** fidelity — Person 4 still owns **recording + profile lock** regardless of feature completeness.
 
 24 hours before:
 
