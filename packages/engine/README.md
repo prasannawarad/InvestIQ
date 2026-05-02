@@ -2,6 +2,8 @@
 
 All deterministic math. **No LLM calls in this package, ever.** If a number appears in the UI, it came from here.
 
+**Status (May 2026):** Person 3 deliverables (`/api/engine/*`, `recommendRebalance`, `simulateScenario`, `generateMatches`, tests in `src/index.test.ts`) are wired into `/rebalance` with **Confirm → Supabase**. Team gaps live elsewhere — see repo root **`README.md` → Implementation status** (Person 1: `/settings`; Person 4: `DEMO.md`).
+
 ## Why deterministic-only
 
 LLMs are bad at multi-step arithmetic on long numbers. We computed the engine separately so that:

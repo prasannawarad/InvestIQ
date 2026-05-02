@@ -8,6 +8,15 @@ If something here conflicts with code in the repo, this document wins — update
 > Current mainline implementation uses Supabase Auth + Supabase Postgres seed data (`02_supabase_seed_mock_data.sql`) as primary runtime data.
 > `packages/data/src/fixtures/*` remain contract/fallback fixtures, and `packages/engine/src/universe.ts` is intentionally fictional/mock for discovery ranking only.
 
+> **Implementation status (audit, May 2026)** — use this when the spec and code drift:
+>
+> | Area | Status |
+> |---|---|
+> | Person 1 — routes in §2.2 | Implemented for `/home`, `/current`, `/current/[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`. **Gap:** **`/settings`** — form loads prefs from Supabase but **Save is not persisted** (`apps/web/src/app/settings/page.tsx`); ship a write-back before treating Settings as complete. |
+> | Person 3 — `/rebalance` + engine | **Shipped:** `packages/engine`, `/api/engine/rebalance` \| `scenario` \| `matches`, modes, receipts, **`Confirm changes` → portfolios/holdings** (`applyRebalanceCommit.ts`), **`?source=` / `?name=`** deep links, **“Why this trade”** rows. Optional: streaming **LLM** narration (today: deterministic narration string + orb). |
+> | Person 4 — extension + `/extension` | **Shipped:** Plasmo extension (bubble + contextual panel → `POST /api/kuber/chat`), in-app **`/extension`** explainer. **Not code:** **`DEMO.md`** demo-day process (backup recording, locked Chrome profile, team dry runs) — Person 4 owns execution. |
+> | Floating widget (§2.4) vs code | Chips may remain visible after messages; auto-**navigate** to `/rebalance` on scenario wording is **not** fully implemented — treat as follow-up vs this spec unless team relaxes wording. |
+
 ---
 
 ## 1. Product

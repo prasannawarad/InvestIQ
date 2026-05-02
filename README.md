@@ -35,10 +35,21 @@ investiq/
 
 | Person | Owns | Day 1 task |
 |---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Run `pnpm setup:web`, paste in Figma Make exported code, wire to Supabase + shared tokens |
+| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Mostly shipped. **Remaining:** persist **`/settings`** Save to Supabase. |
 | 2 — Kuber | `packages/kuber`, floating widget + extension chat, voice pipeline | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
-| 3 — Engine | `packages/engine`, **`/rebalance`** (drift / scenario / panic), engine API routes, Supabase commit on Confirm | Shipped: deterministic engine APIs + rebalance UI, receipt, **`Confirm changes` → `portfolios` / `holdings`** (`apps/web/src/lib/applyRebalanceCommit.ts`), URL deep links (`?source=panic`, `?source=scenario`, `&name=…`) |
-| 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Run `pnpm setup:extension`, scaffold Plasmo, get Kuber overlay rendering on apple.com / cnbc.com |
+| 3 — Engine | `packages/engine`, **`/rebalance`** (drift / scenario / panic), engine API routes, Supabase commit on Confirm | **Shipped** in repo (optional: streaming LLM narration on `/rebalance`). |
+| 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Extension shipped: draggable bubble + `KuberPanel`, `/extension` page, `/api/kuber/chat` (+ speak). **Remaining:** execute `DEMO.md` demo-day rules (backup recording, locked profile, dry runs). |
+
+## Implementation status (May 2026)
+
+Tracked against the codebase (not optimism):
+
+| Person | Done in repo | Remaining |
+|---|---|---|
+| **1 — Shell** | `/home`, `/current`, `[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`, Supabase-backed dashboard flows, **`/extension` explainer page** (with Person 4) | **`/settings`:** Save must **persist** to Supabase; today the page loads prefs but **Save is not wired** (`apps/web/src/app/settings/page.tsx`). |
+| **2 — Kuber** | `packages/kuber`, floating widget, extension chat, Groq routes, ElevenLabs when keys exist | Optional spec polish: hide chips after thread starts; auto-navigate floating widget to `/rebalance` on scenario-like prompts (`PROJECT_SPEC` §2.4). |
+| **3 — Engine** | `packages/engine` + tests, `/api/engine/*`, `/rebalance` (drift / scenario / panic), receipt, **Confirm → Supabase**, query-param deep links, **“Why”** on trade rows | Optional: **streaming LLM** narration on `/rebalance` (deterministic copy + `KuberOrb` today). |
+| **4 — Extension** | Plasmo MV3 app, content script, popup, contextual chat posting to deployed API | **Process only:** own **`DEMO.md`** demo-day checklist — **recorded backup video**, locked demo Chrome profile, group practice, no live ad-lib Kuber. |
 
 ## Day 1 setup
 
@@ -75,7 +86,8 @@ After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/w
 
 - **End of Day 2:** Person 1's /home + Person 2's chat working together on a real Kuber question with Groq.
 - **End of Day 3:** Person 3's rebalance engine output flowing through Person 2's narrator into Person 4's /panic flow.
-- **Person 3 (engine + /rebalance):** Engine package + `/api/engine/*` + rebalance page with Supabase persistence and query-param deep links are implemented; optional polish remains streaming Kuber narration on `/rebalance` (Person 2).
+- **Person 3 (engine + /rebalance):** Shipped in code; optional polish = streaming LLM narration on `/rebalance` (Person 2).
+- **Open gaps before judges:** Person 1 = **Settings save → Supabase**. Person 4 = **`DEMO.md`** execution (backup video + dry runs). See **Implementation status** table above.
 
 ## Demo
 

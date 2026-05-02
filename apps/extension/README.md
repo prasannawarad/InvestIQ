@@ -40,3 +40,5 @@ Load `apps/extension/build/chrome-mv3-prod`.
 After installing or upgrading, **reload normal tabs** once so the content script attaches.
 
 Day-1 scripted **rates/RBI** demo copy still routes via page classification (`lib/classify.ts`) inside the panel as before.
+
+**Team status:** Extension code path for the demo script is implemented. Person 4’s remaining work is **`DEMO.md`** (backup recording, locked Chrome profile, dry runs) — not further Plasmo scaffolding.
