@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { computeFitScore } from "@investiq/engine";
 import { HoldingCard } from "../components/HoldingCard";
 import { useAuth } from "../components/auth/AuthProvider";
-import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
+import { getDashboardData } from "../../lib/supabaseData";
+import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 
 type Filter = "All" | "Stocks" | "Funds" | "Bonds" | "Gold";
 
@@ -38,13 +40,6 @@ function toFilterBucket(assetClass: string, name: string): Filter {
   return "Stocks";
 }
 
-function fitFromHolding(holding: HoldingRow): number {
-  if (holding.asset_class === "debt") return 83;
-  if (holding.asset_class === "gold") return 76;
-  if (holding.asset_class === "cash") return 82;
-  return 85;
-}
-
 export default function CurrentPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<Filter>("All");
@@ -70,12 +65,18 @@ export default function CurrentPage() {
 
       try {
         const data = await getDashboardData(user.id);
+        const portfolio = mapDashboardToPortfolio(data);
+        const userProfile = mapDashboardToUserProfile(data);
+        const fitBySymbol = new Map(
+          portfolio.holdings.map((holding) => [holding.symbol, computeFitScore(holding, userProfile)])
+        );
+
         const mapped = data.holdings.map((holding) => ({
           id: holding.symbol,
           name: holding.name,
           type: toTypeLabel(holding.subcategory),
           value: toCurrency(holding.current_value),
-          fitScore: fitFromHolding(holding),
+          fitScore: fitBySymbol.get(holding.symbol) ?? 70,
           logo: holding.name
             .split(" ")
             .slice(0, 2)

@@ -8,6 +8,14 @@ The single source of truth for demo data shapes. Everyone reads from here.
 - `src/fixtures/` — The three JSON files (`user_profile.json`, `portfolio.json`, `market_context.json`) for the demo user (Priya)
 - `src/index.ts` — Public exports: types and a `loadDemoData()` helper
 
+## Runtime data source (current)
+
+- Primary demo runtime data is seeded in Supabase via `02_supabase_seed_mock_data.sql`.
+- The JSON fixtures in this package remain important as:
+  - schema contract examples,
+  - fallback/offline fixtures,
+  - deterministic test inputs.
+
 ## Contract
 
 The schemas are the API. Anyone changing a JSON shape MUST update the schema first, then update the fixtures, then notify Persons 1, 2, and 3 in chat. No silent shape changes — they will break the engine and the agent.

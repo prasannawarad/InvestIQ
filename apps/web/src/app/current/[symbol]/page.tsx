@@ -5,8 +5,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Info } from "lucide-react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { computeFitScore } from "@investiq/engine";
 import { useAuth } from "../../components/auth/AuthProvider";
-import { getDashboardData, type HoldingRow } from "../../../lib/supabaseData";
+import { getDashboardData } from "../../../lib/supabaseData";
+import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../../lib/engineAdapter";
 
 type StatKey = "P/E ratio" | "Market cap" | "Dividend yield" | "Beta";
 
@@ -23,13 +25,6 @@ function toCurrency(value: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-function fitFromHolding(holding: HoldingRow): number {
-  if (holding.asset_class === "debt") return 83;
-  if (holding.asset_class === "gold") return 76;
-  if (holding.asset_class === "cash") return 82;
-  return 85;
 }
 
 export default function HoldingDetailPage() {
@@ -60,6 +55,9 @@ export default function HoldingDetailPage() {
         const data = await getDashboardData(user.id);
         const found = data.holdings.find((item) => item.symbol.toLowerCase() === symbol.toLowerCase());
         if (!found || !mounted) return;
+        const portfolio = mapDashboardToPortfolio(data);
+        const userProfile = mapDashboardToUserProfile(data);
+        const matchingHolding = portfolio.holdings.find((holding) => holding.symbol === found.symbol);
 
         const metadata = (found.metadata ?? {}) as Record<string, unknown>;
         const purchaseDate = typeof metadata.purchase_date === "string" ? metadata.purchase_date : null;
@@ -75,7 +73,7 @@ export default function HoldingDetailPage() {
                 ? "Broad market fund"
                 : "Diversified holding",
           boughtAgo,
-          fitScore: fitFromHolding(found),
+          fitScore: matchingHolding ? computeFitScore(matchingHolding, userProfile) : 70,
           value: found.current_value,
           weight: found.weight_in_portfolio,
           avgBuyPrice: found.avg_buy_price,

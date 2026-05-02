@@ -12,7 +12,7 @@ InvestIQ is a portfolio management web app for beginner investors. Three surface
 
 Hackathon: Goldman Sachs / UTD JSOM, May 2026. Rubric: 30% UX + 30% rebalancing innovation + 20% transparency + 20% execution.
 
-Demo persona: **Priya Sharma**, 38, schoolteacher, $22,300 invested, balanced risk profile, two goals (house in 3 years, retirement in 26). The demo tells a 3-day story across the surfaces. See `DEMO.md`.
+Demo persona: **Priya Sharma**, 38, schoolteacher, balanced risk profile, two goals (house + retirement). Primary seed data currently uses a ~$5,000 demo portfolio in Supabase. The demo tells a 3-day story across the surfaces. See `DEMO.md`.
 
 ---
 
@@ -27,7 +27,7 @@ investiq/
 │   ├── ui/          Design tokens + shared components
 │   ├── kuber/       Groq + ElevenLabs integration
 │   ├── engine/      Deterministic portfolio math
-│   ├── data/        Zod schemas + Priya's three fixtures
+│   ├── data/        Zod schemas + Priya fixtures (contract/fallback)
 │   └── config/      Shared TS config
 ├── scripts/         Setup helpers
 ├── DEMO.md          Word-for-word demo script
@@ -60,8 +60,8 @@ git clone <repo-url> investiq && cd investiq
 pnpm setup:web         # creates apps/web (Next.js 16, Tailwind)
 pnpm setup:extension   # creates apps/extension (Plasmo)
 pnpm install
-cp .env.example apps/web/.env.local
-# Get keys from team Slack: GROQ_API_KEY, ELEVENLABS_API_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY
+cp apps/web/.env.example apps/web/.env
+# Get keys from team Slack: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, GROQ_API_KEY, ELEVENLABS_API_KEY
 pnpm dev
 ```
 
@@ -73,7 +73,7 @@ If `pnpm dev` fails: Node ≥20, pnpm ≥9, then `pnpm install` again.
 
 | Person | Owns | Day 1 task |
 |---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /panic, /settings, /profile, /help, /extension info page | Paste Figma Make code into apps/web/src/app/*, wire to `@investiq/data` |
+| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /panic, /settings, /profile, /help, /extension info page | Paste Figma Make code into apps/web/src/app/*, wire to Supabase + tokens |
 | 2 — Kuber | `packages/kuber`, /Kuber discovery page, floating widget, voice integration | Implement `chat()` against Groq with streaming |
 | 3 — Engine | `packages/engine`, /rebalance page, all the math including `generateMatches` for /Kuber | Implement `recommendRebalance()` and `simulateScenario('market-drop-20')` |
 | 4 — Extension + polish | `apps/extension`, demo flow integration, recorded backup video | Get Plasmo overlay rendering on a real third-party page |
@@ -117,15 +117,21 @@ If you are an AI coding agent, follow these rules:
 6. **Do not move files between packages without explicit instruction.** Boundaries are intentional.
 7. **Do not implement features marked "out of scope"** in PROJECT_SPEC.md section 11.
 8. **Stream LLM output** wherever possible. Demo's perceived latency depends on streaming.
-9. **Use demo fixtures** in `packages/data/src/fixtures/` for default state.
+9. **Use seeded Supabase data** as primary app state, and keep `packages/data/src/fixtures/` aligned as schema-safe fallback/reference.
 10. **When uncertain, narrow scope.** A working /home is worth more than a half-built /preview.
 11. **`/Kuber` is discovery only.** Do not add a chat panel to `/Kuber` no matter what older comments or code suggest.
+
+### Mock data policy (current)
+
+- `02_supabase_seed_mock_data.sql` is authoritative for demo runtime data.
+- `packages/engine/src/universe.ts` is intentionally fictional/mock and used by `generateMatches()` only.
+- `packages/data/src/fixtures/*` are still maintained because schemas in `packages/data` are the type contract across packages.
 
 ---
 
 ## 9. Critical paths (demo breaks if these don't work)
 
-1. `/home` renders with real fixture data
+1. `/home` renders with real seeded Supabase data
 2. Tapping an "Ask Kuber" chip opens the floating widget pre-filled
 3. Floating widget produces streaming Groq response within ~2s
 4. ElevenLabs streaming TTS plays the response audibly
@@ -152,7 +158,7 @@ Test these end-to-end every day.
 - shadcn/ui (latest stable)
 - Recharts (latest)
 - Plasmo (latest)
-- Clerk (latest)
+- Supabase Auth (latest stable)
 - Zod 3.23+
 
 Don't upgrade mid-hackathon. If a dep breaks, downgrade and fix forward.

@@ -49,6 +49,14 @@ Given a portfolio and proposed trades, project forward to each goal's target dat
 
 Use a simple expected-return model — 8% for equity, 6% for debt, 4% for gold, 1% for cash. Nothing fancier. Document the assumption in the rationale.
 
+### `generateMatches(filters, userProfile, portfolio) → MatchCandidate[]`
+
+Generate ranked discovery candidates for `/Kuber`.
+
+- Returns 6-10 candidates sorted by `match_score` desc.
+- Uses a deterministic fictional universe in `src/universe.ts`.
+- Scoring factors: industry, size, risk, diversification, keyword match.
+
 ## Out of scope for hackathon
 
 - Tax-lot accounting (use a flat 10% LTCG estimate for sells of holdings older than 1 year, 0 for newer)
@@ -59,3 +67,14 @@ Use a simple expected-return model — 8% for equity, 6% for debt, 4% for gold, 
 ## Testing
 
 Person 3 must write at least one test per public function before integration. Place tests in `src/*.test.ts`. Pure functions, no mocks needed.
+
+Run:
+
+```bash
+pnpm -C packages/engine test
+```
+
+## Mock data usage in engine
+
+- `src/universe.ts` is intentionally mock/fictional and is only for discovery ranking.
+- Portfolio/user/goal values are real runtime inputs passed from the web app (currently from Supabase seed data).
