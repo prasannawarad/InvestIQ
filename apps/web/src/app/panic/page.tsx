@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { colors, radii, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../lib/investiqUi";
 
 export default function PanicPage() {
   return (
-    <main className="fixed inset-0 z-50" style={{ backgroundColor: colors.backgroundPanic }}>
+    <main className="investiq-shell fixed inset-0 z-50 min-h-screen" style={{ backgroundColor: colors.background }}>
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link href="/home" className="text-sm hover:underline" style={{ color: colors.textMuted }}>
           ← Back to Home
@@ -20,22 +21,22 @@ export default function PanicPage() {
           <div className="mx-auto mt-10 max-w-xl space-y-4 text-left">
             <Link
               href="/home"
-              className="block border p-5 hover:opacity-95"
-              style={{ borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.cardBg }}
+              className="block p-5 text-[color:var(--investiq-text)] no-underline transition-opacity hover:opacity-95"
+              style={investiqCardStyle()}
             >
               Show me what&apos;s actually happening
             </Link>
             <Link
               href="/rebalance?source=scenario"
-              className="block border p-5 hover:opacity-95"
-              style={{ borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.cardBg }}
+              className="block p-5 text-[color:var(--investiq-text)] no-underline transition-opacity hover:opacity-95"
+              style={investiqCardStyle()}
             >
               Run a scenario
             </Link>
             <Link
               href="/rebalance?source=panic"
-              className="block border p-5 hover:opacity-95"
-              style={{ borderColor: colors.border, borderRadius: radii.lg, backgroundColor: colors.cardBg }}
+              className="block p-5 text-[color:var(--investiq-text)] no-underline transition-opacity hover:opacity-95"
+              style={investiqCardStyle()}
             >
               I want to do something protective
             </Link>

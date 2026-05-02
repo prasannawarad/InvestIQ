@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { colors, radii, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../lib/investiqUi";
+import { InvestiqButton } from "../components/investiq/InvestiqButton";
 
 const glossary = [
   { term: "P/E Ratio", def: "How much investors pay for each dollar of company earnings." },
@@ -33,7 +35,7 @@ export default function HelpPage() {
           <h2 className="mb-6 text-2xl" style={{ color: colors.text }}>Quick glossary</h2>
           <div className="space-y-3">
             {glossary.map((item, idx) => (
-              <article key={item.term} style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+              <article key={item.term} style={investiqCardStyle()}>
                 <button
                   type="button"
                   onClick={() => setGOpen(gOpen === idx ? null : idx)}
@@ -52,7 +54,7 @@ export default function HelpPage() {
           <h2 className="mb-6 text-2xl" style={{ color: colors.text }}>Frequently asked questions</h2>
           <div className="space-y-3">
             {faqs.map((item, idx) => (
-              <article key={item.q} style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+              <article key={item.q} style={investiqCardStyle()}>
                 <button
                   type="button"
                   onClick={() => setFOpen(fOpen === idx ? null : idx)}
@@ -67,12 +69,12 @@ export default function HelpPage() {
           </div>
         </section>
 
-        <section className="p-8" style={{ borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}>
+        <section className="p-8" style={investiqCardStyle()}>
           <h2 className="mb-4 text-2xl" style={{ color: colors.text }}>Contact us</h2>
           <p className="mb-6 text-sm" style={{ color: colors.textMuted }}>Need help with the demo flow? Reach out to support.</p>
-          <button type="button" className="px-6 py-3 text-sm" style={{ borderRadius: radii.md, backgroundColor: colors.accent, color: colors.cardBg }}>
+          <InvestiqButton type="button" variant="primary">
             Get in touch
-          </button>
+          </InvestiqButton>
         </section>
       </div>
     </main>

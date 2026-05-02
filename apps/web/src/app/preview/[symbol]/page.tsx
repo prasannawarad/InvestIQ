@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqCardStyle } from "../../../lib/investiqUi";
 
 export default function PreviewPage() {
   const params = useParams<{ symbol: string }>();
@@ -15,10 +16,7 @@ export default function PreviewPage() {
           ← Back to Kuber Discovery
         </Link>
 
-        <section
-          className="mt-6 p-8"
-          style={{ borderRadius: radii.xl, backgroundColor: colors.cardBg, boxShadow: shadows.card }}
-        >
+        <section className="mt-6 p-8" style={investiqCardStyle()}>
           <h1 className="text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
             Preview: {symbol}
           </h1>

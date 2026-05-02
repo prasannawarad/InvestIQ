@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqTabStyle } from "../../lib/investiqUi";
 import { computeFitScore } from "@investiq/engine";
 import { HoldingCard } from "../components/HoldingCard";
 import { useAuth } from "../components/auth/AuthProvider";
@@ -121,20 +122,9 @@ export default function CurrentPage() {
         </div>
       ) : null}
 
-      <div className="mb-8 flex gap-3">
+      <div className="mb-8 flex flex-wrap gap-3">
         {filters.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setFilter(item)}
-            className="px-6 py-2 text-sm transition-colors"
-            style={{
-              borderRadius: radii.pill,
-              backgroundColor: filter === item ? colors.accent : colors.cardBg,
-              color: filter === item ? colors.cardBg : colors.text,
-              boxShadow: filter === item ? "none" : shadows.card,
-            }}
-          >
+          <button key={item} type="button" onClick={() => setFilter(item)} style={investiqTabStyle(filter === item)}>
             {item}
           </button>
         ))}

@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Sun } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { colors, typography } from "@investiq/ui/tokens";
+import { investiqButtonStyle, investiqCardStyle, investiqFilterChipStyle, investiqOutlineCtaStyle } from "../../lib/investiqUi";
 import { HoldingCard } from "../components/HoldingCard";
-import { StatCard } from "../components/StatCard";
+import { JourneyAreaChart } from "../components/investiq/JourneyAreaChart";
+import { KuberOrb } from "../components/investiq/KuberOrb";
+import { PortfolioStatDeck } from "../components/investiq/PortfolioStatDeck";
 import { useAuth } from "../components/auth/AuthProvider";
 import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
 
@@ -55,9 +51,9 @@ function buildJourneyData(totalValue: number) {
 
 type HomeModel = {
   profileName: string;
-  totalValue: string;
-  dayChangeValue: string;
-  dayChangePercent: string;
+  totalValueUsd: number;
+  dayChangeAbsUsd: number;
+  dayChangePercent: number;
   dayChangeType: "positive" | "negative" | "neutral";
   healthScore: number;
   healthVerdict: string;
@@ -146,9 +142,9 @@ export default function HomePage() {
 
         const nextModel: HomeModel = {
           profileName: data.profile.name,
-          totalValue: formatCurrency(Number(summary.total_value ?? 0)),
-          dayChangeValue: formatCurrency(Math.abs(Number(summary.day_change_value ?? 0))),
-          dayChangePercent: `${Math.abs(dayChangePercent).toFixed(2)}%`,
+          totalValueUsd: Number(summary.total_value ?? 0),
+          dayChangeAbsUsd: Math.abs(Number(summary.day_change_value ?? 0)),
+          dayChangePercent: dayChangePercent,
           dayChangeType,
           healthScore,
           healthVerdict,
@@ -174,11 +170,19 @@ export default function HomePage() {
     };
   }, [user?.id]);
 
-  const dayChangeLabel = useMemo(() => {
-    if (!model) return "-";
-    const sign = model.dayChangeType === "positive" ? "+" : "-";
-    return `${sign}${model.dayChangeValue}`;
-  }, [model]);
+  useEffect(() => {
+    if (!model || !user?.id) return;
+    try {
+      const key = "investiq-home-celebrate";
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+      toast.success("You're in", {
+        description: `Kuber synced your portfolio — welcome back, ${model.profileName.split(/\s+/)[0] ?? "there"}.`,
+      });
+    } catch {
+      /* sessionStorage unavailable */
+    }
+  }, [model, user?.id]);
 
   if (error) {
     return (
@@ -204,62 +208,50 @@ export default function HomePage() {
     <main className="ml-60 px-8 py-12">
       <div className="max-w-[1200px]">
         <section className="mb-12">
-          <div className="mb-8 flex items-center gap-3">
-            <Sun className="h-8 w-8" style={{ color: colors.amber }} />
-            <h1 className="text-4xl" style={{ fontFamily: typography.serif }}>
-              Your portfolio is healthy.
-            </h1>
+          <div className="mb-8 flex flex-wrap items-center gap-5">
+            <KuberOrb size="md" />
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
+              <h1 className="text-4xl" style={{ fontFamily: typography.serif }}>
+                Your portfolio is healthy.
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: colors.textMuted }}>
+                Live numbers from Supabase — Kuber keeps the story calm and clear.
+              </p>
+            </motion.div>
           </div>
-          <div className="mb-6 grid grid-cols-3 gap-6">
-            <StatCard label="Total Value" value={model.totalValue} />
-            <StatCard
-              label="Today's Change"
-              value={dayChangeLabel}
-              change={model.dayChangePercent}
-              changeType={model.dayChangeType}
-            />
-            <StatCard
-              label="Health Score"
-              value={`${model.healthVerdict} (${model.healthScore})`}
-              icon={<CheckCircle className="h-6 w-6" style={{ color: colors.green }} />}
-            />
-          </div>
+          <PortfolioStatDeck
+            totalValueUsd={model.totalValueUsd}
+            dayChangeAbsUsd={model.dayChangeAbsUsd}
+            dayChangePercent={model.dayChangePercent}
+            dayChangeType={model.dayChangeType}
+            healthScore={model.healthScore}
+            healthVerdict={model.healthVerdict}
+          />
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/panic"
-              className="inline-flex rounded-2xl px-6 py-3 text-sm transition-opacity hover:opacity-95"
-              style={{ backgroundColor: colors.coral, color: colors.cardBg }}
+              className="transition-opacity hover:opacity-95"
+              style={{ ...investiqButtonStyle("coral"), textDecoration: "none" }}
             >
               I&apos;m freaking out
             </Link>
-            <Link
-              href="/rebalance"
-              className="inline-flex rounded-2xl border px-6 py-3 text-sm"
-              style={{ borderColor: colors.accent, color: colors.accent }}
-            >
+            <Link href="/rebalance" className="hover:opacity-95" style={{ ...investiqOutlineCtaStyle(), textDecoration: "none" }}>
               Run a scenario
             </Link>
           </div>
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
-          <div className="mb-6 flex items-center justify-between">
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-xl">Journey</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {periods.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setPeriod(item)}
-                  className="rounded-full px-4 py-2 text-sm"
-                  style={{
-                    backgroundColor: period === item ? colors.accent : colors.backgroundPanic,
-                    color: period === item ? colors.cardBg : colors.text,
-                  }}
+                  style={investiqFilterChipStyle(period === item)}
                 >
                   {item}
                 </button>
@@ -267,41 +259,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={model.chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
-              <XAxis dataKey="month" stroke={colors.textMuted} style={{ fontSize: "12px" }} />
-              <YAxis stroke={colors.textMuted} style={{ fontSize: "12px" }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: colors.cardBg,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: radii.sm,
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={colors.accent}
-                strokeWidth={2}
-                dot={{ fill: colors.accent, r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <JourneyAreaChart data={model.chartData} />
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl">Ask Kuber</h2>
           <div className="grid grid-cols-2 gap-3">
             {askKuberQuestions.map((question) => (
               <button
                 key={question}
                 type="button"
-                className="rounded-full px-4 py-3 text-center text-sm"
-                style={{ backgroundColor: colors.backgroundPanic, color: colors.text }}
+                className="w-full text-center"
+                style={{ ...investiqFilterChipStyle(false), padding: "12px 16px", color: colors.text }}
                 onClick={() =>
                   window.dispatchEvent(
                     new CustomEvent("investiq:open-kuber", {
@@ -316,10 +285,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          className="mb-8 p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="mb-8 p-8" style={investiqCardStyle()}>
           <h2 className="mb-4 text-xl">What you should know today</h2>
           <div className="space-y-4">
             {model.marketCards.map((card) => (
@@ -338,10 +304,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section
-          className="p-8"
-          style={{ borderRadius: radii.xl, boxShadow: shadows.card, backgroundColor: colors.cardBg }}
-        >
+        <section className="p-8" style={investiqCardStyle()}>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl">Your holdings</h2>
             <Link href="/current" className="flex items-center gap-1 text-sm hover:underline" style={{ color: colors.accent }}>

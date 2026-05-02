@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
+import { investiqFieldStyle } from "../../lib/investiqUi";
+import { InvestiqButton } from "../components/investiq/InvestiqButton";
 import { useAuth } from "../components/auth/AuthProvider";
 import { getDashboardData } from "../../lib/supabaseData";
 
@@ -120,7 +122,7 @@ export default function SettingsPage() {
                 max="10"
                 value={risk}
                 onChange={(event) => setRisk(Number(event.target.value))}
-                className="w-full"
+                className="investiq-range w-full"
               />
               <div className="mt-3 text-sm" style={{ color: colors.textMuted }}>
                 {risk <= 3 ? "Cautious" : risk <= 7 ? "Balanced" : "Growth-focused"} ({risk}/10)
@@ -147,20 +149,16 @@ export default function SettingsPage() {
             </h2>
             <select
               disabled
-              className="w-full px-4 py-3 text-sm"
-              style={{ borderRadius: radii.md, border: `1px solid ${colors.border}`, backgroundColor: colors.backgroundPanic, color: colors.textMuted }}
+              className="text-sm opacity-90"
+              style={{ ...investiqFieldStyle(), color: colors.textMuted }}
             >
               <option>USD ($) - Locked for demo</option>
             </select>
           </section>
 
-          <button
-            type="button"
-            className="w-full py-3 text-sm"
-            style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}
-          >
+          <InvestiqButton type="button" variant="primary" fullWidth>
             Save
-          </button>
+          </InvestiqButton>
         </div>
       </div>
     </main>
