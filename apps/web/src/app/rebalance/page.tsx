@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Volume2 } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { toast } from "sonner";
 import { colors, radii, typography } from "@investiq/ui/tokens";
@@ -18,6 +18,7 @@ import { supabase } from "../../lib/supabase";
 import { getDashboardData } from "../../lib/supabaseData";
 import { KuberOrb } from "../components/investiq/KuberOrb";
 import { ScenarioLiveSlider } from "../components/investiq/ScenarioLiveSlider";
+import { useKuberVoice } from "../../lib/useKuberVoice";
 
 type Mode = "Drift" | "Scenario" | "Panic";
 
@@ -155,6 +156,7 @@ function RebalancePageContent() {
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const [groqNarration, setGroqNarration] = useState<string | null>(null);
+  const { isSpeaking, speak: speakNarration, stop: stopNarration } = useKuberVoice();
 
   useEffect(() => {
     if (!searchParams.has("source") && !searchParams.has("name")) return;
@@ -361,7 +363,7 @@ function RebalancePageContent() {
 
   if (!model) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
         <p style={{ color: error ? colors.coral : colors.textMuted }}>
           {error ?? "Loading rebalance data..."}
         </p>
@@ -370,7 +372,7 @@ function RebalancePageContent() {
   }
 
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[1000px]">
         <header className="mb-8">
           <h1 className="mb-6 text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
@@ -433,11 +435,30 @@ function RebalancePageContent() {
           className="mb-8 border p-6"
           style={{ borderRadius: radii.xl, borderColor: colors.borderSubtle, backgroundColor: colors.surface }}
         >
-          <div className="flex items-start gap-4">
-            <KuberOrb size="sm" className="-mt-2" />
-            <p className="leading-relaxed" style={{ color: colors.text }}>
-              {narrationDisplay}
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <KuberOrb size="sm" className="-mt-2" />
+              <p className="leading-relaxed" style={{ color: colors.text }}>
+                {narrationDisplay}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition-colors hover:bg-white/[0.04]"
+              style={{ borderColor: colors.border, color: colors.accent }}
+              onClick={() => {
+                if (isSpeaking) {
+                  stopNarration();
+                  return;
+                }
+                void speakNarration(narrationDisplay);
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4" />
+                {isSpeaking ? "Stop voice" : "Hear Kuber"}
+              </span>
+            </button>
           </div>
           {mode === "Scenario" && model.scenarioProjectedTotal != null && model.scenarioName ? (
             <div className="mt-4 text-sm" style={{ color: colors.textMuted }}>
@@ -451,7 +472,7 @@ function RebalancePageContent() {
             Recommended changes
           </h2>
 
-          <div className="mb-12 grid grid-cols-2 gap-12">
+          <div className="mb-12 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-12">
             <div>
               <div className="mb-6 text-center">
                 <div className="mb-2 text-sm" style={{ color: colors.textMuted }}>
@@ -620,7 +641,7 @@ export default function RebalancePage() {
   return (
     <Suspense
       fallback={
-        <main className="ml-60 px-8 py-12">
+        <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
           <p style={{ color: colors.textMuted }}>Loading rebalance…</p>
         </main>
       }

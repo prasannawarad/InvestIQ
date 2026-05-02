@@ -3,15 +3,16 @@
 import type { Holding, UserProfile } from "@investiq/data";
 import type { UniverseCandidate } from "@investiq/engine";
 import { computeFitScore, getUniverseCandidateBySymbol } from "@investiq/engine";
-import { Info } from "lucide-react";
+import { Info, Volume2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { mapDashboardToUserProfile } from "../../../../lib/engineAdapter";
 import { supabase } from "../../../../lib/supabase";
 import { getDashboardData } from "../../../../lib/supabaseData";
 import { investiqButtonStyle, investiqCardStyle } from "../../../../lib/investiqUi";
+import { useKuberVoice } from "../../../../lib/useKuberVoice";
 import { useAuth } from "../../../components/auth/AuthProvider";
 
 type StatKey = "P/E ratio" | "Market cap" | "Dividend yield" | "Beta";
@@ -142,6 +143,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeInfo, setActiveInfo] = useState<StatKey | null>(null);
   const [llmExplain, setLlmExplain] = useState<{ term: StatKey; text: string } | null>(null);
+  const { isSpeaking, speak: speakKuberText, stop: stopKuberVoice } = useKuberVoice();
 
   useEffect(() => {
     let mounted = true;
@@ -178,13 +180,13 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
     const termStat = activeInfo;
     const holdName = candidate?.name;
     const holdSymbol = candidate?.symbol;
-    if (!termStat || !holdName || !holdSymbol) {
-      setLlmExplain(null);
-      return;
-    }
-    const termKey: StatKey = termStat;
     let cancelled = false;
     async function jargonFetch() {
+      if (!termStat || !holdName || !holdSymbol) {
+        if (!cancelled) setLlmExplain(null);
+        return;
+      }
+      const termKey: StatKey = termStat;
       try {
         const response = await fetch("/api/kuber/jargon", {
           method: "POST",
@@ -212,13 +214,13 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
 
   if (!candidate) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
         <div className="mx-auto max-w-[1100px]">
           <Link href="/Kuber" className="text-sm" style={{ color: colors.textMuted }}>
             ← Back to discovery
           </Link>
           <p className="mt-6" style={{ color: colors.coral }}>
-            Unknown discovery code "{symbol.toUpperCase()}". Refresh matches from /Kuber.
+            Unknown discovery code &quot;{symbol.toUpperCase()}&quot;. Refresh matches from /Kuber.
           </p>
         </div>
       </main>
@@ -235,14 +237,14 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
   const scoreDisplay = fitScore != null ? `${fitScore}%` : "—";
 
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[1100px]">
         <Link href="/Kuber" className="text-sm" style={{ color: colors.textMuted }}>
           ← Back to discovery
         </Link>
 
-        <header className="mt-6 mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="flex gap-5">
+        <header className="mt-6 mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 gap-5">
             <div
               className="flex h-16 w-16 shrink-0 items-center justify-center text-lg font-semibold"
               style={{
@@ -254,7 +256,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             >
               {candidate.logo}
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
                 {candidate.name}
               </h1>
@@ -268,7 +270,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             </div>
           </div>
 
-          <div className="min-w-[240px] p-5" style={investiqCardStyle()}>
+          <div className="w-full p-5 lg:min-w-[240px] lg:max-w-[360px]" style={investiqCardStyle()}>
             <div className="text-sm" style={{ color: colors.textMuted }}>
               Match score {Number.isFinite(queryScore) ? "(from grid)" : "(modeled)"}
             </div>
@@ -383,6 +385,23 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
                   <div className="mt-2 text-xs" style={{ color: colors.textMuted }}>
                     {(llmExplain?.term === row.label ? llmExplain.text : null) ?? statDefinitions[row.label]}
                     {" "}
+                    {llmExplain?.term === row.label ? (
+                      <button
+                        type="button"
+                        className="mr-2 inline-flex items-center gap-1"
+                        style={{ color: colors.accent }}
+                        onClick={() => {
+                          if (isSpeaking) {
+                            stopKuberVoice();
+                            return;
+                          }
+                          void speakKuberText(llmExplain.text);
+                        }}
+                      >
+                        <Volume2 className="h-3.5 w-3.5" />
+                        {isSpeaking ? "Stop voice" : "Speak explanation"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       style={{ color: colors.accent }}

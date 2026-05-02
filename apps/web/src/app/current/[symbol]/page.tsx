@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Info } from "lucide-react";
+import { Info, Volume2 } from "lucide-react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { investiqButtonStyle, investiqCardStyle } from "../../../lib/investiqUi";
 import { computeFitScore } from "@investiq/engine";
@@ -11,6 +11,7 @@ import { useAuth } from "../../components/auth/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 import { getDashboardData } from "../../../lib/supabaseData";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../../lib/engineAdapter";
+import { useKuberVoice } from "../../../lib/useKuberVoice";
 
 type StatKey = "P/E ratio" | "Market cap" | "Dividend yield" | "Beta";
 
@@ -36,6 +37,7 @@ export default function HoldingDetailPage() {
   const [activeInfo, setActiveInfo] = useState<StatKey | null>(null);
   const [llmExplain, setLlmExplain] = useState<{ term: StatKey; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { isSpeaking, speak: speakKuberText, stop: stopKuberVoice } = useKuberVoice();
   const [model, setModel] = useState<{
     symbol: string;
     name: string;
@@ -105,16 +107,15 @@ export default function HoldingDetailPage() {
   useEffect(() => {
     const termStat = activeInfo;
     const hold = model;
-    if (!termStat || !hold) {
-      setLlmExplain(null);
-      return;
-    }
-
-    const termKey: StatKey = termStat;
-    const { name: holdingName, symbol: holdingSymbol } = hold;
     let cancelled = false;
 
     async function jargonFetch() {
+      if (!termStat || !hold) {
+        if (!cancelled) setLlmExplain(null);
+        return;
+      }
+      const termKey: StatKey = termStat;
+      const { name: holdingName, symbol: holdingSymbol } = hold;
       try {
         const response = await fetch("/api/kuber/jargon", {
           method: "POST",
@@ -145,7 +146,7 @@ export default function HoldingDetailPage() {
 
   if (error) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
         <p style={{ color: colors.coral }}>{error}</p>
       </main>
     );
@@ -153,7 +154,7 @@ export default function HoldingDetailPage() {
 
   if (!model) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
         <p style={{ color: colors.textMuted }}>Loading holding details...</p>
       </main>
     );
@@ -167,14 +168,14 @@ export default function HoldingDetailPage() {
   ];
 
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[1100px]">
         <Link href="/current" className="text-sm" style={{ color: colors.textMuted }}>
           ← Back to Current
         </Link>
 
-        <header className="mt-6 mb-8 flex items-start justify-between gap-6">
-          <div>
+        <header className="mt-6 mb-8 flex flex-col items-start justify-between gap-6 lg:flex-row">
+          <div className="min-w-0">
             <h1 className="text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
               {model.name}
             </h1>
@@ -183,7 +184,7 @@ export default function HoldingDetailPage() {
             </p>
           </div>
 
-          <div className="min-w-[240px] p-5" style={investiqCardStyle()}>
+          <div className="w-full p-5 lg:min-w-[240px] lg:max-w-[360px]" style={investiqCardStyle()}>
             <div className="text-sm" style={{ color: colors.textMuted }}>
               Fit score
             </div>
@@ -228,7 +229,7 @@ export default function HoldingDetailPage() {
           </div>
         </section>
 
-        <section className="mb-8 grid grid-cols-2 gap-4">
+        <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
           <article className="p-5" style={investiqCardStyle()}>
             <h3 className="mb-2" style={{ color: colors.text }}>Bulls say</h3>
             <p className="text-sm" style={{ color: colors.textMuted }}>
@@ -247,7 +248,7 @@ export default function HoldingDetailPage() {
           <h2 className="mb-4 text-xl" style={{ color: colors.text }}>
             Key stats in plain language
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {statRows.map((row) => (
               <div key={row.label} className="rounded-lg border p-4" style={{ borderColor: colors.border }}>
                 <div className="mb-1 flex items-center justify-between text-sm" style={{ color: colors.textMuted }}>
@@ -266,6 +267,23 @@ export default function HoldingDetailPage() {
                     {(llmExplain?.term === row.label ? llmExplain.text : null) ??
                       statDefinitions[row.label]}
                     {" "}
+                    {llmExplain?.term === row.label ? (
+                      <button
+                        type="button"
+                        className="mr-2 inline-flex items-center gap-1"
+                        style={{ color: colors.accent }}
+                        onClick={() => {
+                          if (isSpeaking) {
+                            stopKuberVoice();
+                            return;
+                          }
+                          void speakKuberText(llmExplain.text);
+                        }}
+                      >
+                        <Volume2 className="h-3.5 w-3.5" />
+                        {isSpeaking ? "Stop voice" : "Speak explanation"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       style={{ color: colors.accent }}

@@ -34,6 +34,29 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+function getTimeGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getDynamicMessage(
+  dayChangeType: "positive" | "negative" | "neutral",
+  healthVerdict: string,
+): string {
+  if (dayChangeType === "positive" && healthVerdict === "Strong")
+    return "You're up today and your allocation is well-balanced. Keep holding steady.";
+  if (dayChangeType === "positive") return "Small gains today. Your portfolio is on track.";
+  if (dayChangeType === "negative" && healthVerdict !== "Needs attention")
+    return "Markets pulled back slightly. No cause for concern — your fundamentals are solid.";
+  if (dayChangeType === "negative")
+    return "Worth reviewing your allocation. Kuber sees an opportunity to rebalance.";
+  if (healthVerdict === "Strong")
+    return "No major moves today. Your foundations are solid — Kuber is watching.";
+  return "Quiet day. Kuber's keeping an eye on your goals.";
+}
+
 function summarizeHoldingType(subcategory: string): string {
   const map: Record<string, string> = {
     large_cap: "Big established company",
@@ -46,10 +69,45 @@ function summarizeHoldingType(subcategory: string): string {
   return map[subcategory] ?? "Diversified holding";
 }
 
-function buildJourneyData(totalValue: number) {
-  const points = [0.81, 0.83, 0.85, 0.87, 0.86, 0.84, 0.9, 0.94, 0.97, 0.985, 1, 0.992];
-  const months = ["Jun 25", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan 26", "Feb", "Mar", "Apr", "May"];
-  return months.map((month, index) => ({ month, value: Math.round(totalValue * points[index]) }));
+function buildJourneyDataForPeriod(totalValue: number, period: string): { month: string; value: number }[] {
+  switch (period) {
+    case "1M": {
+      const ratios = [0.974, 0.981, 0.986, 0.992, 0.996, 1.0];
+      const labels = ["Apr 7", "Apr 11", "Apr 15", "Apr 21", "Apr 28", "May 2"];
+      return labels.map((month, i) => ({ month, value: Math.round(totalValue * ratios[i]) }));
+    }
+    case "3M": {
+      const ratios = [0.952, 0.961, 0.969, 0.974, 0.979, 0.983, 0.986, 0.990, 0.993, 0.996, 0.998, 1.0];
+      const labels = ["Feb 3", "Feb 10", "Feb 17", "Feb 24", "Mar 3", "Mar 10", "Mar 17", "Mar 24", "Apr 7", "Apr 14", "Apr 21", "May 2"];
+      return labels.map((month, i) => ({ month, value: Math.round(totalValue * ratios[i]) }));
+    }
+    case "YTD": {
+      const ratios = [0.931, 0.958, 0.972, 0.986, 1.0];
+      const labels = ["Jan", "Feb", "Mar", "Apr", "May"];
+      return labels.map((month, i) => ({ month, value: Math.round(totalValue * ratios[i]) }));
+    }
+    case "All": {
+      const ratios = [0.58, 0.61, 0.64, 0.68, 0.73, 0.76, 0.79, 0.81, 0.83, 0.87, 0.84, 0.9, 0.94, 0.97, 0.985, 1.0, 0.992];
+      const labels = ["Jan 24", "Mar", "May", "Jul", "Sep", "Nov", "Jan 25", "Mar", "May", "Jul", "Sep", "Nov", "Jan 26", "Feb", "Mar", "Apr", "May"];
+      return labels.map((month, i) => ({ month, value: Math.round(totalValue * ratios[i]) }));
+    }
+    default: {
+      // 1Y
+      const ratios = [0.81, 0.83, 0.85, 0.87, 0.86, 0.84, 0.9, 0.94, 0.97, 0.985, 1.0, 0.992];
+      const labels = ["Jun 25", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan 26", "Feb", "Mar", "Apr", "May"];
+      return labels.map((month, i) => ({ month, value: Math.round(totalValue * ratios[i]) }));
+    }
+  }
+}
+
+function periodGainLabel(totalValue: number, period: string): { amount: string; percent: string; positive: boolean } {
+  const firstRatios: Record<string, number> = { "1M": 0.974, "3M": 0.952, YTD: 0.931, "1Y": 0.81, All: 0.58 };
+  const firstRatio = firstRatios[period] ?? 0.81;
+  const startValue = Math.round(totalValue * firstRatio);
+  const gain = totalValue - startValue;
+  const pct = ((gain / startValue) * 100).toFixed(2);
+  const abs = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Math.abs(gain));
+  return { amount: `${gain >= 0 ? "+" : "-"}${abs}`, percent: `${gain >= 0 ? "+" : ""}${pct}%`, positive: gain >= 0 };
 }
 
 type HomeModel = {
@@ -154,7 +212,7 @@ export default function HomePage() {
           dayChangeType,
           healthScore,
           healthVerdict,
-          chartData: buildJourneyData(Number(summary.total_value ?? 0)),
+          chartData: buildJourneyDataForPeriod(Number(summary.total_value ?? 0), "1Y"),
           holdings: topHoldings,
           marketCards: cards,
         };
@@ -192,7 +250,7 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 md:ml-60 md:px-8 md:py-12">
         <div className="text-sm" style={{ color: colors.coral }}>
           {error}
         </div>
@@ -202,7 +260,7 @@ export default function HomePage() {
 
   if (!model) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 md:ml-60 md:px-8 md:py-12">
         <div className="text-sm" style={{ color: colors.textMuted }}>
           Loading your portfolio...
         </div>
@@ -210,20 +268,47 @@ export default function HomePage() {
     );
   }
 
+  const firstName = model.profileName.split(/\s+/)[0] ?? "there";
+  const greeting = getTimeGreeting();
+  const dynamicMessage = getDynamicMessage(model.dayChangeType, model.healthVerdict);
+
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="max-w-[1200px]">
         <section className="mb-12">
-          <div className="mb-8 flex flex-wrap items-center gap-5">
-            <KuberOrb size="md" />
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
-              <h1 className="text-4xl" style={{ fontFamily: typography.serif }}>
-                Your portfolio is healthy.
+          <div className="relative mb-8 flex items-start justify-between gap-6">
+            <div
+              className="pointer-events-none absolute -left-4 -top-6 h-52 w-52 rounded-full opacity-[0.06] blur-3xl"
+              style={{ background: colors.accent }}
+            />
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <motion.span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: colors.accent }}
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 2.2, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                />
+                <span className="text-xs uppercase tracking-[0.14em]" style={{ color: colors.textMuted }}>
+                  Kuber is live
+                </span>
+              </div>
+              <h1
+                className="text-[2.5rem] leading-[1.1] sm:text-[3rem]"
+                style={{ fontFamily: typography.serif, color: colors.text }}
+              >
+                {greeting}, {firstName}.
               </h1>
-              <p className="mt-1 text-sm" style={{ color: colors.textMuted }}>
-                Live numbers from Supabase — Kuber keeps the story calm and clear.
+              <p className="mt-2 max-w-[440px] text-sm leading-relaxed" style={{ color: colors.textMuted }}>
+                {dynamicMessage}
               </p>
             </motion.div>
+            <KuberOrb size="sm" className="hidden shrink-0 sm:block" />
           </div>
           <PortfolioStatDeck
             totalValueUsd={model.totalValueUsd}
@@ -250,7 +335,19 @@ export default function HomePage() {
 
         <section className="mb-8 p-8" style={investiqCardStyle()}>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-xl">Journey</h2>
+            <div>
+              <div className="text-2xl font-semibold" style={{ color: colors.text, fontFamily: typography.serif }}>
+                {formatCurrency(model.totalValueUsd)}
+              </div>
+              {(() => {
+                const gain = periodGainLabel(model.totalValueUsd, period);
+                return (
+                  <div className="mt-0.5 text-sm" style={{ color: gain.positive ? colors.green : colors.coral }}>
+                    {gain.amount} ({gain.percent})
+                  </div>
+                );
+              })()}
+            </div>
             <div className="flex flex-wrap gap-2">
               {periods.map((item) => (
                 <button
@@ -265,7 +362,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <JourneyAreaChart data={model.chartData} />
+          <JourneyAreaChart data={buildJourneyDataForPeriod(model.totalValueUsd, period)} />
         </section>
 
         <section className="mb-8 p-8" style={investiqCardStyle()}>
@@ -319,7 +416,7 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {model.holdings.map((holding) => (
               <HoldingCard key={holding.id} {...holding} />
             ))}
