@@ -2,6 +2,7 @@
 
 import type { DiscoveryFilters, MatchCandidate } from "@investiq/engine";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -413,27 +414,34 @@ export default function KuberPage() {
             <div className="space-y-6">
               {matches.map((match) => (
                 <article key={match.id} className="p-6" style={investiqCardStyle()}>
-                  <div className="mb-4 flex items-start justify-between">
-                    <div className="flex items-start gap-4">
+                  <Link
+                    href={`/Kuber/preview/${encodeURIComponent(match.id)}?score=${match.score}`}
+                    className="mb-4 flex items-start justify-between gap-4 rounded-xl outline-none transition hover:brightness-[1.08] focus-visible:ring-2 focus-visible:ring-[var(--investiq-accent)]/40"
+                    style={{ color: "inherit", textDecoration: "none" }}
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
                       <div
-                        className="flex h-12 w-12 items-center justify-center text-sm"
+                        className="flex h-12 w-12 shrink-0 items-center justify-center text-sm"
                         style={{ borderRadius: radii.pill, backgroundColor: colors.surfaceElevated }}
                       >
                         {match.logo}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="mb-1 text-xl" style={{ color: colors.text, fontFamily: typography.serif }}>
                           {match.name}
                         </h4>
                         <div className="text-sm font-mono" style={{ color: colors.textMuted }}>
                           {match.id} · {match.industry} · {match.size} · {match.location}
                         </div>
+                        <div className="mt-2 text-xs" style={{ color: colors.accent }}>
+                          Tap for research desk →
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-full px-3 py-1 text-sm" style={{ color: colors.green, backgroundColor: `${colors.green}22` }}>
+                    <div className="shrink-0 rounded-full px-3 py-1 text-sm" style={{ color: colors.green, backgroundColor: `${colors.green}22` }}>
                       {match.score}%
                     </div>
-                  </div>
+                  </Link>
 
                   <button
                     type="button"

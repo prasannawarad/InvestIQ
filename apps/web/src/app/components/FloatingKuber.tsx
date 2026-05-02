@@ -116,12 +116,9 @@ export function FloatingKuber() {
   const overlayTransition = reduceMotion ? { duration: 0 } : panelTransition;
 
   const isHiddenRoute = useMemo(() => {
-    return (
-      pathname.startsWith("/Kuber") ||
-      pathname.startsWith("/kuber") ||
-      pathname.startsWith("/rebalance") ||
-      pathname === "/panic"
-    );
+    const p = pathname.toLowerCase();
+    if (p.startsWith("/kuber/preview")) return false;
+    return p === "/kuber" || p.startsWith("/rebalance") || p === "/panic";
   }, [pathname]);
 
   /** Tell KuberOrb / other canvases to stop animating before the browser paints the overlay. */
