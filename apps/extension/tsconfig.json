@@ -1,0 +1,9 @@
+{
+  "extends": "../../packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["chrome", "react", "react-dom"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".plasmo/index.d.ts"],
+  "exclude": ["node_modules", "build", "dist"]
+}
