@@ -7,27 +7,27 @@ import { investiqCardStyle } from "../../../lib/investiqUi";
 import { AnimatedCounter } from "./AnimatedCounter";
 
 function HealthGauge({ score, color }: { score: number; color: string }) {
-  const r = 15;
+  const r = 20;
   const circumference = 2 * Math.PI * r;
   const filled = (Math.min(100, Math.max(0, score)) / 100) * circumference;
   return (
-    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden>
-      <circle cx="22" cy="22" r={r} fill="none" stroke={`${color}22`} strokeWidth="2.5" />
+    <svg width="72" height="72" viewBox="0 0 56 56" aria-hidden>
+      <circle cx="28" cy="28" r={r} fill="none" stroke={`${color}22`} strokeWidth="2.8" />
       <motion.circle
-        cx="22"
-        cy="22"
+        cx="28"
+        cy="28"
         r={r}
         fill="none"
         stroke={color}
-        strokeWidth="2.5"
+        strokeWidth="2.8"
         strokeLinecap="round"
         strokeDasharray={`${filled} ${circumference}`}
-        transform="rotate(-90 22 22)"
+        transform="rotate(-90 28 28)"
         initial={{ strokeDasharray: `0 ${circumference}` }}
         animate={{ strokeDasharray: `${filled} ${circumference}` }}
         transition={{ delay: 0.55, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
       />
-      <text x="22" y="27" textAnchor="middle" fontSize="10" fontWeight="600" fill={color}>
+      <text x="28" y="33" textAnchor="middle" fontSize="12" fontWeight="600" fill={color}>
         {score}
       </text>
     </svg>
@@ -145,15 +145,22 @@ export function PortfolioStatDeck({
             borderColor: `${colors.border}cc`,
           }}
         >
-          <div className="mb-1 flex items-center justify-between text-sm">
-            <span style={{ color: colors.textMuted }}>Health Score</span>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-sm" style={{ color: colors.textMuted }}>
+                Health Score
+              </div>
+              <div className="text-sm" style={{ color: colors.text }}>
+                Status
+              </div>
+              <div className="text-xs" style={{ color: colors.textMuted }}>
+                Portfolio Alignment Score
+              </div>
+            </div>
             <HealthGauge score={healthScore} color={gaugeColor} />
           </div>
-          <div className="text-3xl" style={{ fontFamily: typography.serif, color: colors.text }}>
+          <div className="mt-2 text-xl" style={{ fontFamily: typography.serif, color: colors.text }}>
             {healthVerdict}
-          </div>
-          <div className="mt-1 text-xs" style={{ color: colors.textMuted }}>
-            Portfolio alignment score
           </div>
         </div>
       </motion.div>
