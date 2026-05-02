@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
-import { Sidebar } from "./components/Sidebar";
-import { FloatingKuber } from "./components/FloatingKuber";
 import { colors, typography } from "@investiq/ui/tokens";
+import { AppShell } from "./components/auth/AppShell";
+import { AuthProvider } from "./components/auth/AuthProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -38,9 +38,9 @@ export default function RootLayout({
         }
       >
         <div className="min-h-screen bg-[var(--investiq-bg)] text-[var(--investiq-text)]">
-          <Sidebar />
-          {children}
-          <FloatingKuber />
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </div>
       </body>
     </html>

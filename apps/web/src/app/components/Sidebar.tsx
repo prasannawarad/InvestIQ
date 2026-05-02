@@ -14,6 +14,7 @@ import {
   User,
 } from "lucide-react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
+import { useAuth } from "./auth/AuthProvider";
 
 const mainLinks = [
   { name: "Home", path: "/home", icon: Home },
@@ -38,6 +39,13 @@ function isActive(pathname: string, path: string): boolean {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
+  const fullName = user?.user_metadata?.full_name ?? "Priya Sharma";
+  const initials = fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((part: string) => part[0]?.toUpperCase() ?? "")
+    .join("") || "PS";
 
   return (
     <aside
@@ -119,15 +127,22 @@ export function Sidebar() {
             className="flex h-10 w-10 items-center justify-center rounded-full"
             style={{ backgroundColor: colors.accent, color: colors.cardBg }}
           >
-            PS
+            {initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm" style={{ color: colors.text }}>
-              Priya Sharma
+              {fullName}
             </div>
           </div>
         </div>
-        <button className="flex items-center gap-2 text-sm" style={{ color: colors.textMuted }}>
+        <button
+          type="button"
+          className="flex items-center gap-2 text-sm"
+          style={{ color: colors.textMuted }}
+          onClick={() => {
+            void signOut();
+          }}
+        >
           <LogOut className="h-4 w-4" />
           Sign out
         </button>
