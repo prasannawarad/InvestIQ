@@ -313,8 +313,9 @@ Deterministic portfolio math. **No LLM, no network calls, no unseeded randomness
 
 Exports:
 - `simulateScenario(portfolio, scenario)` — scenarios: `market-drop-20`, `market-drop-30`, `inflation-stays-high`, `withdraw-20-percent`, `lose-job-need-emergency`
-- `recommendRebalance(portfolio, profile, mode)` — modes: drift (5% threshold), scenario (0.85x adjustment), panic (3% threshold, 0.6x adjustment), discover (3% budget, new money only)
+- `recommendRebalance(portfolio, target, source)` — Deterministically calculates trades to restore target allocation. **Drift mode** triggers when an asset class deviates by >5%. **Scenario mode** triggers a gentler rebalance (0.85x adjustment) to recover from stress. **Panic mode** executes defensive, smaller trims (3% threshold, 0.6x adjustment) to build resilience without over-trading.
 - `computeFitScore(holding, profile)` — weighted: 40% risk alignment + 30% horizon fit + 20% concentration + 10% diversification
+- `computePortfolioHealth(portfolio, profile)` — Aggregates overall health (0-100 score). Weighted: 60% average fit score of holdings, 30% allocation alignment (drifts from target), 10% diversification breadth across asset classes.
 - `computeGoalImpact(portfolio, goal, postTradeAllocation)` — projects months-to-target under post-trade allocation
 - `generateMatches(profile, filters)` — ranks candidates from `universe.ts` by industry/size/risk/diversification/keyword fit
 - `getUniverseCandidateBySymbol(symbol)` — fetch candidate metadata
