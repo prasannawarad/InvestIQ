@@ -1,13 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
+import { useAuth } from "../components/auth/AuthProvider";
+import { getDashboardData } from "../../lib/supabaseData";
+
+const toneOptions = ["Friendly and simple", "Direct and concise", "Detailed with explanations"] as const;
+const frequencyOptions = ["Daily", "Weekly", "Only when something matters"] as const;
+
+function mapTone(value?: string): (typeof toneOptions)[number] {
+  if (value === "friendly_simple") return "Friendly and simple";
+  if (value === "direct_concise") return "Direct and concise";
+  if (value === "detailed_explanations") return "Detailed with explanations";
+  return "Friendly and simple";
+}
+
+function mapFrequency(value?: string): (typeof frequencyOptions)[number] {
+  if (value === "daily") return "Daily";
+  if (value === "only_when_matter") return "Only when something matters";
+  if (value === "weekly") return "Weekly";
+  return "Weekly";
+}
 
 export default function SettingsPage() {
-  const [tone, setTone] = useState("Friendly and simple");
-  const [notifications, setNotifications] = useState("Weekly");
+  const { user } = useAuth();
+  const [tone, setTone] = useState<(typeof toneOptions)[number]>("Friendly and simple");
+  const [notifications, setNotifications] = useState<(typeof frequencyOptions)[number]>("Weekly");
   const [risk, setRisk] = useState(5);
   const [voice, setVoice] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function init() {
+      if (!user?.id) return;
+      const data = await getDashboardData(user.id);
+      const prefs = data.profile.preferences as Record<string, string>;
+      const riskProfile = data.profile.risk_profile as Record<string, number>;
+      if (!mounted) return;
+      setTone(mapTone(prefs.communication_tone));
+      setNotifications(mapFrequency(prefs.notification_frequency));
+      setRisk(Math.max(1, Math.min(10, Number(riskProfile.risk_score ?? 5))));
+      setVoice(true);
+    }
+
+    void init();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   return (
     <main className="ml-60 px-8 py-12">
@@ -22,7 +64,7 @@ export default function SettingsPage() {
               Communication tone
             </h2>
             <div className="space-y-3">
-              {["Friendly and simple", "Direct and concise", "Detailed with explanations"].map((option) => (
+              {toneOptions.map((option) => (
                 <label
                   key={option}
                   className="block p-4"
@@ -44,7 +86,7 @@ export default function SettingsPage() {
               Notification frequency
             </h2>
             <div className="space-y-3">
-              {["Daily", "Weekly", "Only when something matters"].map((option) => (
+              {frequencyOptions.map((option) => (
                 <label
                   key={option}
                   className="block p-4"

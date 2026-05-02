@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Info } from "lucide-react";
-import { loadDemoData } from "@investiq/data";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { useAuth } from "../../components/auth/AuthProvider";
+import { getDashboardData, type HoldingRow } from "../../../lib/supabaseData";
 
 type StatKey = "P/E ratio" | "Market cap" | "Dividend yield" | "Beta";
 
@@ -24,10 +25,19 @@ function toCurrency(value: number): string {
   }).format(value);
 }
 
+function fitFromHolding(holding: HoldingRow): number {
+  if (holding.asset_class === "debt") return 83;
+  if (holding.asset_class === "gold") return 76;
+  if (holding.asset_class === "cash") return 82;
+  return 85;
+}
+
 export default function HoldingDetailPage() {
+  const { user } = useAuth();
   const params = useParams<{ symbol: string }>();
   const symbol = String(params.symbol ?? "");
   const [activeInfo, setActiveInfo] = useState<StatKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [model, setModel] = useState<{
     symbol: string;
     name: string;
@@ -44,41 +54,60 @@ export default function HoldingDetailPage() {
     let mounted = true;
 
     async function init() {
-      const { portfolio } = await loadDemoData();
-      const found = portfolio.holdings.find((item) => item.symbol.toLowerCase() === symbol.toLowerCase());
-      if (!found || !mounted) return;
+      if (!user?.id) return;
 
-      const fitScore = found.symbol === "ICICIPRUBLU" ? 78 : found.asset_class === "debt" ? 83 : 86;
+      try {
+        const data = await getDashboardData(user.id);
+        const found = data.holdings.find((item) => item.symbol.toLowerCase() === symbol.toLowerCase());
+        if (!found || !mounted) return;
 
-      setModel({
-        symbol: found.symbol,
-        name: found.name,
-        sizeLabel:
-          found.subcategory === "large_cap" || found.subcategory === "large_cap_active"
-            ? "Big established"
-            : found.subcategory === "index_fund"
-              ? "Broad market fund"
-              : "Diversified holding",
-        boughtAgo: "18 months ago",
-        fitScore,
-        value: found.current_value,
-        weight: found.weight_in_portfolio,
-        avgBuyPrice: found.avg_buy_price,
-        currentPrice: found.current_price,
-      });
+        const metadata = (found.metadata ?? {}) as Record<string, unknown>;
+        const purchaseDate = typeof metadata.purchase_date === "string" ? metadata.purchase_date : null;
+        const boughtAgo = purchaseDate ? `${Math.max(1, Math.round((Date.now() - new Date(purchaseDate).getTime()) / (1000 * 60 * 60 * 24 * 30)))} months ago` : "recently";
+
+        setModel({
+          symbol: found.symbol,
+          name: found.name,
+          sizeLabel:
+            found.subcategory === "large_cap" || found.subcategory === "large_cap_active"
+              ? "Big established"
+              : found.subcategory === "index_fund"
+                ? "Broad market fund"
+                : "Diversified holding",
+          boughtAgo,
+          fitScore: fitFromHolding(found),
+          value: found.current_value,
+          weight: found.weight_in_portfolio,
+          avgBuyPrice: found.avg_buy_price,
+          currentPrice: found.current_price,
+        });
+        setError(null);
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : "Failed to load holding detail");
+        }
+      }
     }
 
     void init();
     return () => {
       mounted = false;
     };
-  }, [symbol]);
+  }, [user?.id, symbol]);
 
   const pnlPercent = useMemo(() => {
     if (!model) return 0;
     if (model.avgBuyPrice <= 0) return 0;
     return ((model.currentPrice - model.avgBuyPrice) / model.avgBuyPrice) * 100;
   }, [model]);
+
+  if (error) {
+    return (
+      <main className="ml-60 px-8 py-12">
+        <p style={{ color: colors.coral }}>{error}</p>
+      </main>
+    );
+  }
 
   if (!model) {
     return (
@@ -195,9 +224,18 @@ export default function HoldingDetailPage() {
                 <div style={{ color: colors.text }}>{row.value}</div>
                 {activeInfo === row.label ? (
                   <div className="mt-2 text-xs" style={{ color: colors.textMuted }}>
-                    {statDefinitions[row.label]} <button type="button" style={{ color: colors.accent }} onClick={() => {
-                      window.dispatchEvent(new CustomEvent("investiq:open-kuber", { detail: { prompt: `Explain ${row.label} for ${model.name}` } }));
-                    }}>Ask Kuber more</button>
+                    {statDefinitions[row.label]}{" "}
+                    <button
+                      type="button"
+                      style={{ color: colors.accent }}
+                      onClick={() => {
+                        window.dispatchEvent(
+                          new CustomEvent("investiq:open-kuber", { detail: { prompt: `Explain ${row.label} for ${model.name}` } })
+                        );
+                      }}
+                    >
+                      Ask Kuber more
+                    </button>
                   </div>
                 ) : null}
               </div>

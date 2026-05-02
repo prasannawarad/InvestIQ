@@ -3,31 +3,25 @@
 import { FormEvent, useState } from "react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { useAuth } from "./components/auth/AuthProvider";
+import { DEMO_USER } from "../lib/demoUser";
 
 export default function LoginPage() {
-  const { signInDemo, signInWithGoogle, signInWithPassword, signUpWithPassword } = useAuth();
+  const { signInWithGoogle, signInWithPassword, signUpWithPassword } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const demoEmail = "priya@investiq.demo";
-  const demoPassword = "Priya123!";
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setPending(true);
 
-    let result: { error: string | null };
-    if (mode === "signin" && email.trim().toLowerCase() === demoEmail && password === demoPassword) {
-      result = await signInDemo(email, password);
-    } else {
-      result =
-        mode === "signin"
-          ? await signInWithPassword(email.trim(), password)
-          : await signUpWithPassword(email.trim(), password);
-    }
+    const result =
+      mode === "signin"
+        ? await signInWithPassword(email.trim(), password)
+        : await signUpWithPassword(email.trim(), password);
 
     if (result.error) {
       setError(result.error);
@@ -39,7 +33,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
       <section
-        className="w-full max-w-[440px] p-8"
+        className="w-full max-w-[460px] p-8"
         style={{
           borderRadius: radii.xl,
           backgroundColor: colors.cardBg,
@@ -59,18 +53,18 @@ export default function LoginPage() {
           style={{ backgroundColor: colors.backgroundPanic, color: colors.text }}
         >
           <div className="mb-1" style={{ fontWeight: 600 }}>
-            Demo credentials (Priya)
+            Demo account (seeded in Supabase)
           </div>
-          <div>Email: priya@investiq.demo</div>
-          <div>Password: Priya123!</div>
+          <div>Email: {DEMO_USER.email}</div>
+          <div>Password: {DEMO_USER.password}</div>
           <button
             type="button"
             className="mt-2 underline"
             style={{ color: colors.accent }}
             onClick={() => {
               setMode("signin");
-              setEmail(demoEmail);
-              setPassword(demoPassword);
+              setEmail(DEMO_USER.email);
+              setPassword(DEMO_USER.password);
               setError(null);
             }}
           >

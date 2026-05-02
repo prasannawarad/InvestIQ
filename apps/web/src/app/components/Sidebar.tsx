@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
 import { useAuth } from "./auth/AuthProvider";
+import { DEMO_USER } from "../../lib/demoUser";
 
 const mainLinks = [
   { name: "Home", path: "/home", icon: Home },
@@ -40,7 +41,7 @@ function isActive(pathname: string, path: string): boolean {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const fullName = user?.user_metadata?.full_name ?? "Priya Sharma";
+  const fullName = user?.user_metadata?.full_name ?? `${DEMO_USER.firstName} ${DEMO_USER.lastName}`;
   const initials = fullName
     .split(" ")
     .slice(0, 2)

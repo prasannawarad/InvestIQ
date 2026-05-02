@@ -9,7 +9,6 @@ type AuthContextValue = {
   session: Session | null;
   isAuthenticated: boolean;
   loading: boolean;
-  signInDemo: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
   signUpWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -17,20 +16,9 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const DEMO_EMAIL = "priya@investiq.demo";
-const DEMO_PASSWORD = "Priya123!";
-const DEMO_AUTH_KEY = "investiq_demo_auth";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [demoAuthed, setDemoAuthed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem(DEMO_AUTH_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,20 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user: session?.user ?? null,
       session,
-      isAuthenticated: Boolean(session) || demoAuthed,
+      isAuthenticated: Boolean(session),
       loading,
-      signInDemo: async (email: string, password: string) => {
-        if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-          return { error: "Invalid demo credentials" };
-        }
-        setDemoAuthed(true);
-        try {
-          window.localStorage.setItem(DEMO_AUTH_KEY, "1");
-        } catch {
-          // no-op
-        }
-        return { error: null };
-      },
       signInWithGoogle: async () => {
         const redirectTo = `${window.location.origin}/home`;
         await supabase.auth.signInWithOAuth({
@@ -90,16 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error?.message ?? null };
       },
       signOut: async () => {
-        setDemoAuthed(false);
-        try {
-          window.localStorage.removeItem(DEMO_AUTH_KEY);
-        } catch {
-          // no-op
-        }
         await supabase.auth.signOut();
       },
     }),
-    [session, demoAuthed, loading]
+    [session, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

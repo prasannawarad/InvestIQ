@@ -1,39 +1,137 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { useAuth } from "../components/auth/AuthProvider";
+import { getDashboardData } from "../../lib/supabaseData";
 
-const beforeData = [
-  { name: "Nifty 50", value: 12200, color: colors.accent },
-  { name: "HDFC Bank", value: 4850, color: colors.green },
-  { name: "ICICI Bluechip", value: 5250, color: colors.amber },
-];
+type Mode = "Drift" | "Scenario" | "Panic";
 
-const afterData = [
-  { name: "Nifty 50", value: 12200, color: colors.accent },
-  { name: "HDFC Bank", value: 4850, color: colors.green },
-  { name: "ICICI Bluechip", value: 5200, color: colors.amber },
-  { name: "Bond Fund", value: 50, color: colors.coral },
-];
+type Slice = { name: string; value: number; color: string };
 
-const modes = ["Drift", "Scenario", "Panic"];
+type RebalanceModel = {
+  totalValue: number;
+  currentEquity: number;
+  currentDebt: number;
+  targetEquity: number;
+  targetDebt: number;
+  beforeData: Slice[];
+  afterData: Slice[];
+  trades: { title: string; why: string }[];
+  houseGoalName: string;
+  retirementGoalName: string;
+};
+
+function toCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 export default function RebalancePage() {
-  const [mode, setMode] = useState("Drift");
+  const { user } = useAuth();
+  const [mode, setMode] = useState<Mode>("Drift");
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [model, setModel] = useState<RebalanceModel | null>(null);
 
-  const trades = [
-    {
-      title: "Trade 1: Sell $50 of ICICI Bluechip Fund",
-      why: "Equity allocation drifted above target. This reduces drift while keeping long-term growth exposure.",
-    },
-    {
-      title: "Trade 2: Buy $50 of HDFC Corporate Bond Fund",
-      why: "Adds stability and restores your intended defensive cushion for short-term volatility.",
-    },
-  ];
+  useEffect(() => {
+    let mounted = true;
+
+    async function init() {
+      if (!user?.id) return;
+      const data = await getDashboardData(user.id);
+      if (!mounted) return;
+
+      const summary = data.portfolio.summary as Record<string, number>;
+      const allocation = data.portfolio.allocation as Record<string, Record<string, number> | number>;
+      const byAsset = (allocation.by_asset_class ?? {}) as Record<string, number>;
+      const target = (allocation.target_allocation ?? {}) as Record<string, number>;
+
+      const topHoldings = [...data.holdings].sort((a, b) => b.current_value - a.current_value).slice(0, 3);
+
+      const beforeData: Slice[] = topHoldings.map((holding, idx) => ({
+        name: holding.name.replace(" Fund", ""),
+        value: holding.current_value,
+        color: [colors.accent, colors.green, colors.amber][idx] ?? colors.textMuted,
+      }));
+
+      const totalValue = Number(summary.total_value ?? 0);
+      const currentEquity = Number(byAsset.equity ?? 0);
+      const currentDebt = Number(byAsset.debt ?? 0);
+      const targetEquity = Number(target.equity ?? 0);
+      const targetDebt = Number(target.debt ?? 0);
+
+      const driftPoints = Math.max(0, currentEquity - targetEquity);
+      const rebalanceAmount = Math.round((totalValue * driftPoints) / 100);
+      const sellAmount = Math.max(50, Math.min(rebalanceAmount, topHoldings[0]?.current_value ?? 50));
+      const buyAmount = sellAmount;
+
+      const first = topHoldings[0];
+      const debtFund = data.holdings.find((h) => h.asset_class === "debt") ?? topHoldings[1] ?? topHoldings[0];
+
+      const afterData: Slice[] = beforeData.map((slice) => {
+        if (first && slice.name === first.name.replace(" Fund", "")) {
+          return { ...slice, value: Math.max(0, slice.value - sellAmount) };
+        }
+        return slice;
+      });
+
+      const debtName = debtFund.name.replace(" Fund", "");
+      const existingDebtIdx = afterData.findIndex((slice) => slice.name === debtName);
+      if (existingDebtIdx >= 0) {
+        afterData[existingDebtIdx] = { ...afterData[existingDebtIdx], value: afterData[existingDebtIdx].value + buyAmount };
+      } else {
+        afterData.push({ name: debtName, value: buyAmount, color: colors.coral });
+      }
+
+      const houseGoal = data.goals[0];
+      const retirementGoal = data.goals[1] ?? data.goals[0];
+
+      setModel({
+        totalValue,
+        currentEquity,
+        currentDebt,
+        targetEquity,
+        targetDebt,
+        beforeData,
+        afterData,
+        trades: [
+          {
+            title: `Trade 1: Sell ${toCurrency(sellAmount)} of ${first?.name ?? "equity holding"}`,
+            why: `Your equity allocation is ${currentEquity}% while target is ${targetEquity}%. This trim reduces concentration without changing long-term plan.`,
+          },
+          {
+            title: `Trade 2: Buy ${toCurrency(buyAmount)} of ${debtFund.name}`,
+            why: `Raises your debt cushion toward ${targetDebt}% target so short-term volatility has less impact on your goals.`,
+          },
+        ],
+        houseGoalName: houseGoal?.name ?? "House deposit goal",
+        retirementGoalName: retirementGoal?.name ?? "Retirement goal",
+      });
+    }
+
+    void init();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
+  const narration = useMemo(() => {
+    if (!model) return "Loading recommendation...";
+    return `Your portfolio drifted from ${model.targetEquity}/${model.targetDebt} to ${model.currentEquity}/${model.currentDebt} stocks-to-debt. I recommend a small adjustment to return to target with minimal disruption.`;
+  }, [model]);
+
+  if (!model) {
+    return (
+      <main className="ml-60 px-8 py-12">
+        <p style={{ color: colors.textMuted }}>Loading rebalance data...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="ml-60 px-8 py-12">
@@ -43,7 +141,7 @@ export default function RebalancePage() {
             Rebalance
           </h1>
           <div className="flex gap-3">
-            {modes.map((item) => (
+            {(["Drift", "Scenario", "Panic"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
@@ -72,8 +170,7 @@ export default function RebalancePage() {
               K
             </div>
             <p className="leading-relaxed" style={{ color: colors.text }}>
-              Your portfolio drifted from 85/15 to 88/12 stocks to bonds. I recommend a small adjustment to get you back on track
-              with minimal disruption.
+              {narration}
             </p>
           </div>
         </section>
@@ -90,13 +187,13 @@ export default function RebalancePage() {
                   Before
                 </div>
                 <div className="text-3xl" style={{ fontFamily: typography.serif }}>
-                  $22,300
+                  {toCurrency(model.totalValue)}
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={beforeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
-                    {beforeData.map((entry) => (
+                  <Pie data={model.beforeData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
+                    {model.beforeData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
@@ -111,13 +208,13 @@ export default function RebalancePage() {
                   After
                 </div>
                 <div className="text-3xl" style={{ fontFamily: typography.serif }}>
-                  $22,300
+                  {toCurrency(model.totalValue)}
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={afterData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
-                    {afterData.map((entry) => (
+                  <Pie data={model.afterData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
+                    {model.afterData.map((entry) => (
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
@@ -128,7 +225,7 @@ export default function RebalancePage() {
           </div>
 
           <div className="mb-8 space-y-4">
-            {trades.map((trade, idx) => (
+            {model.trades.map((trade, idx) => (
               <div key={trade.title} className="p-4" style={{ borderRadius: radii.lg, backgroundColor: colors.backgroundPanic }}>
                 <button
                   type="button"
@@ -166,11 +263,11 @@ export default function RebalancePage() {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span style={{ color: colors.textMuted }}>House deposit goal</span>
+                <span style={{ color: colors.textMuted }}>{model.houseGoalName}</span>
                 <span style={{ color: colors.green }}>improves by 1 month</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: colors.textMuted }}>Retirement goal</span>
+                <span style={{ color: colors.textMuted }}>{model.retirementGoalName}</span>
                 <span style={{ color: colors.text }}>unchanged</span>
               </div>
             </div>
