@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,32 +16,11 @@ import { Mic, Send, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { FLOATING_KUBER_VISIBILITY, type FloatingKuberVisibilityDetail } from "../../lib/floatingKuberEvents";
+import { KUBER_CUE_GROUPS, KUBER_EXTENSION_PAGE_CUES, readKuberChatResponse } from "@investiq/kuber";
 import { investiqFieldStyle, investiqFilterChipStyle } from "../../lib/investiqUi";
 import { useAuth } from "./auth/AuthProvider";
 
-const chipGroups = [
-  {
-    label: "SCENARIOS",
-    chips: [
-      "What if markets drop 20%?",
-      "What if I need $5,000 soon?",
-      "What if inflation stays high?",
-    ],
-  },
-  {
-    label: "QUICK QUESTIONS",
-    chips: ["Am I at risk?", "What should I know today?", "Why did my portfolio drop?"],
-  },
-  {
-    label: "JARGON",
-    chips: ["Explain P/E ratio", "What's an expense ratio?"],
-  },
-];
-
-interface Message {
-  role: "kuber" | "user";
-  content: string;
-}
+type ChatRow = { id: string; role: "kuber" | "user"; content: string };
 
 function getFirstName(fullName: string | null | undefined): string {
   const name = fullName?.trim();
@@ -63,6 +50,28 @@ function notMountedServer() {
   return false;
 }
 
+function excerptFromDom(): string {
+  if (typeof document === "undefined") return "";
+  const articleText =
+    document.querySelector("article")?.textContent ||
+    document.querySelector("main")?.textContent ||
+    document.body?.innerText ||
+    "";
+  return articleText.replace(/\s+/g, " ").trim().slice(0, 360);
+}
+
+function toApiTurns(rows: ChatRow[]): { role: "user" | "assistant"; content: string }[] {
+  return rows
+    .filter((r) => r.role === "user" || r.role === "kuber")
+    .map((r) => ({
+      role: r.role === "user" ? ("user" as const) : ("assistant" as const),
+      content: r.content,
+    }))
+    .slice(-12);
+}
+
+const FLOATING_KUBER_CUE_GROUPS = [...KUBER_CUE_GROUPS, KUBER_EXTENSION_PAGE_CUES];
+
 export function FloatingKuber() {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -70,7 +79,11 @@ export function FloatingKuber() {
   const [isOpen, setIsOpen] = useState(false);
   const mounted = useSyncExternalStore(subscribeToClientMount, mountedOnClient, notMountedServer);
   const [message, setMessage] = useState("");
-  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatRow[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const chatRef = useRef<ChatRow[]>([]);
+  const speakTeardownRef = useRef<(() => void) | null>(null);
+  const chatScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const firstName = getFirstName(user?.user_metadata?.full_name);
 
   const overlayTransition = reduceMotion ? { duration: 0 } : panelTransition;
@@ -109,6 +122,14 @@ export function FloatingKuber() {
   }, [isOpen]);
 
   useEffect(() => {
+    chatRef.current = chatMessages;
+  }, [chatMessages]);
+
+  useEffect(() => {
+    chatScrollAnchorRef.current?.scrollIntoView({ block: "end" });
+  }, [chatMessages]);
+
+  useEffect(() => {
     const onOpen = (event: Event) => {
       const customEvent = event as CustomEvent<{ prompt?: string }>;
       const prompt = customEvent.detail?.prompt ?? "";
@@ -120,15 +141,149 @@ export function FloatingKuber() {
     return () => window.removeEventListener("investiq:open-kuber", onOpen as EventListener);
   }, []);
 
-  const appendExchange = () => {
-    const trimmed = message.trim();
-    if (!trimmed) return;
-    setChatMessages((prev) => [
-      ...prev,
-      { role: "user", content: trimmed },
-      { role: "kuber", content: "Streaming Groq + voice is wired in Person 2 — Kuber hears you." },
-    ]);
-    setMessage("");
+  const stopSpeakPlayback = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    speakTeardownRef.current?.();
+    speakTeardownRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => stopSpeakPlayback();
+  }, [stopSpeakPlayback]);
+
+  useEffect(() => {
+    if (!isOpen) stopSpeakPlayback();
+  }, [isOpen, stopSpeakPlayback]);
+
+  const speakLine = useCallback(async (spokenText: string) => {
+    if (typeof window === "undefined") return;
+    stopSpeakPlayback();
+    const clipped = spokenText.trim().slice(0, 4800);
+    if (!clipped) return;
+
+    try {
+      const abort =
+        typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(30_000)
+          : undefined;
+      const response = await fetch("/api/kuber/speak", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        ...(abort ? { signal: abort } : {}),
+        body: JSON.stringify({ text: clipped }),
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio();
+        audio.src = url;
+        const teardown = () => {
+          audio.pause();
+          URL.revokeObjectURL(url);
+          if (speakTeardownRef.current === teardown) speakTeardownRef.current = null;
+        };
+        audio.onended = teardown;
+        audio.onerror = teardown;
+        speakTeardownRef.current = teardown;
+        await audio.play().catch(teardown);
+        return;
+      }
+    } catch {
+      // fallback below
+    }
+
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const utterance = new SpeechSynthesisUtterance(clipped);
+    utterance.rate = 1.02;
+    const voices = synth.getVoices?.() ?? [];
+    const voice = voices.find((v) => v.lang?.toLowerCase().startsWith("en")) ?? voices[0];
+    if (voice) utterance.voice = voice;
+    synth.speak(utterance);
+  }, [stopSpeakPlayback]);
+
+  const submitChat = useCallback(
+    async (trimmedPrompt: string) => {
+      const trimmed = trimmedPrompt.trim();
+      if (!trimmed || isSending) return;
+
+      const userRow: ChatRow = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: trimmed,
+      };
+      const nextThread = [...chatRef.current, userRow];
+      chatRef.current = nextThread;
+      setChatMessages(nextThread);
+      setMessage("");
+      setIsSending(true);
+
+      const abort =
+        typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(45_000)
+          : undefined;
+
+      try {
+        const response = await fetch("/api/kuber/chat", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          ...(abort ? { signal: abort } : {}),
+          body: JSON.stringify({
+            mode: "floating",
+            messages: toApiTurns(nextThread),
+            context: {
+              title: typeof document !== "undefined" ? document.title : "InvestIQ",
+              url: typeof window !== "undefined" ? window.location.href : "",
+              excerpt: excerptFromDom(),
+              classified: { badgeLabel: "In InvestIQ app" },
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new Error(`${response.status}: ${errBody}`);
+        }
+
+        const answer = await readKuberChatResponse(response);
+        setChatMessages((prev) => {
+          const updated: ChatRow[] = [
+            ...prev,
+            { id: `kuber-${Date.now()}`, role: "kuber", content: answer },
+          ];
+          chatRef.current = updated;
+          return updated;
+        });
+      } catch {
+        setChatMessages((prev) => {
+          const updated: ChatRow[] = [
+            ...prev,
+            {
+              id: `fallback-${Date.now()}`,
+              role: "kuber",
+              content:
+                "I could not reach the chat service. Check `GROQ_API_KEY` in `apps/web/.env` and that this page can call `/api/kuber/chat`.",
+            },
+          ];
+          chatRef.current = updated;
+          return updated;
+        });
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [isSending],
+  );
+
+  const lastKuberReply = useMemo(() => {
+    for (let i = chatMessages.length - 1; i >= 0; i--) {
+      if (chatMessages[i]?.role === "kuber") return chatMessages[i]!.content;
+    }
+    return null;
+  }, [chatMessages]);
+
+  const sendFromComposer = () => {
+    void submitChat(message);
   };
 
   if (isHiddenRoute) {
@@ -166,7 +321,6 @@ export function FloatingKuber() {
                     background: `linear-gradient(165deg, ${colors.cardBg} 0%, color-mix(in srgb, ${colors.surfaceElevated} 55%, ${colors.background}) 100%)`,
                     boxShadow: shadows.popover,
                     borderColor: `${colors.accent}33`,
-                    contain: "layout paint",
                   }}
                   role="dialog"
                   aria-modal="true"
@@ -214,72 +368,117 @@ export function FloatingKuber() {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto overscroll-contain p-4">
-                    {chatMessages.length === 0 ? (
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-3 pt-4">
                       <div className="space-y-4">
-                        <div className="mb-6 text-center" style={{ fontFamily: typography.serif, color: colors.text }}>
-                          Hi {firstName}. What can I help with?
+                        {chatMessages.length === 0 ? (
+                          <div
+                            className="text-center text-sm"
+                            style={{ fontFamily: typography.serif, color: colors.text }}
+                          >
+                            Hi {firstName}. What can I help with?
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {chatMessages.map((chat) => (
+                              <div
+                                key={chat.id}
+                                className={`flex ${chat.role === "user" ? "justify-end" : "justify-start"}`}
+                              >
+                                <div className="max-w-[88%] min-w-0">
+                                  <div
+                                    className="rounded-2xl px-4 py-2.5 text-sm shadow-sm"
+                                    style={{
+                                      backgroundColor: chat.role === "user" ? colors.accent : colors.surface,
+                                      color: chat.role === "user" ? colors.onAccent : colors.text,
+                                      border: chat.role === "user" ? "none" : `1px solid ${colors.border}`,
+                                    }}
+                                  >
+                                    {chat.content}
+                                  </div>
+                                  {chat.role === "kuber" ? (
+                                    <button
+                                      type="button"
+                                      className="mt-1.5 rounded-lg px-2.5 py-1 text-[12px] font-semibold ring-1 transition-colors hover:bg-white/[0.04]"
+                                      style={{
+                                        borderColor: colors.border,
+                                        color: colors.accent,
+                                      }}
+                                      aria-label="Read this reply aloud"
+                                      onClick={() => void speakLine(chat.content)}
+                                    >
+                                      Speak
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div
+                          className="border-t pt-4"
+                          style={{ borderColor: colors.border }}
+                        >
+                          {FLOATING_KUBER_CUE_GROUPS.map((group) => (
+                            <div key={group.label} className="mb-4 last:mb-0">
+                              <div className="mb-2 text-xs uppercase tracking-wide" style={{ color: colors.textMuted }}>
+                                {group.label}
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {group.chips.map((chip) => (
+                                  <button
+                                    key={chip}
+                                    type="button"
+                                    disabled={isSending}
+                                    className="ring-1 transition-transform hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                                    style={{
+                                      ...investiqFilterChipStyle(false),
+                                      fontSize: "12px",
+                                      padding: "6px 12px",
+                                      borderColor: colors.border,
+                                    }}
+                                    onClick={() => void submitChat(chip)}
+                                  >
+                                    {chip}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        {chipGroups.map((group) => (
-                          <div key={group.label}>
-                            <div className="mb-2 text-xs uppercase tracking-wide" style={{ color: colors.textMuted }}>
-                              {group.label}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {group.chips.map((chip) => (
-                                <button
-                                  key={chip}
-                                  type="button"
-                                  className="ring-1 transition-transform hover:brightness-110 active:scale-[0.98]"
-                                  style={{
-                                    ...investiqFilterChipStyle(false),
-                                    fontSize: "12px",
-                                    padding: "6px 12px",
-                                    borderColor: colors.border,
-                                  }}
-                                  onClick={() => setMessage(chip)}
-                                >
-                                  {chip}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                        <div ref={chatScrollAnchorRef} className="h-px shrink-0" aria-hidden />
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {chatMessages.map((chat, index) => (
-                          <div key={index} className={`flex ${chat.role === "user" ? "justify-end" : "justify-start"}`}>
-                            <div
-                              className="max-w-[88%] rounded-2xl px-4 py-2.5 text-sm shadow-sm"
-                              style={{
-                                backgroundColor: chat.role === "user" ? colors.accent : colors.surface,
-                                color: chat.role === "user" ? colors.onAccent : colors.text,
-                                border: chat.role === "user" ? "none" : `1px solid ${colors.border}`,
-                              }}
-                            >
-                              {chat.content}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="p-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+                  <div
+                    className="shrink-0 border-t px-4 pb-4 pt-3"
+                    style={{
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                      boxShadow: "0 -8px 28px rgba(0, 0, 0, 0.22)",
+                    }}
+                  >
                     <div className="mb-2 flex items-center gap-2">
                       <button
                         type="button"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 disabled:cursor-not-allowed disabled:opacity-40"
                         style={{
                           backgroundColor: colors.surface,
                           borderColor: colors.border,
                         }}
+                        aria-label="Speak last Kuber reply"
+                        title="Uses ElevenLabs when configured; otherwise browser voice"
+                        disabled={!lastKuberReply || isSending}
+                        onClick={() => lastKuberReply && void speakLine(lastKuberReply)}
                       >
                         <Mic className="h-4 w-4" style={{ color: colors.accent }} />
                       </button>
                       <input
                         type="text"
+                        name="floating-kuber-message"
+                        id="floating-kuber-message"
                         value={message}
                         onChange={(event) => setMessage(event.target.value)}
                         placeholder="Ask Kuber…"
@@ -291,20 +490,28 @@ export function FloatingKuber() {
                           width: "auto",
                           minWidth: 0,
                         }}
+                        disabled={isSending}
                         onKeyDown={(e) => {
                           if (e.key !== "Enter") return;
                           e.preventDefault();
-                          appendExchange();
+                          sendFromComposer();
                         }}
                       />
                       <button
                         type="button"
-                        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full shadow-md transition-transform active:scale-95 hover:brightness-110"
+                        className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full shadow-md transition-transform hover:brightness-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
                         style={{ backgroundColor: colors.accent }}
                         aria-label="Send message"
-                        onClick={() => appendExchange()}
+                        disabled={isSending || !message.trim()}
+                        onClick={() => sendFromComposer()}
                       >
-                        <Send className="h-4 w-4" style={{ color: colors.onAccent }} />
+                        {isSending ? (
+                          <span className="text-sm font-bold" style={{ color: colors.onAccent }}>
+                            …
+                          </span>
+                        ) : (
+                          <Send className="h-4 w-4" style={{ color: colors.onAccent }} />
+                        )}
                       </button>
                     </div>
                     <Link

@@ -71,6 +71,21 @@ Total runtime target: 5.5 minutes (30s intro + 4.5min demo + 30s outro).
 
 "That's InvestIQ. One product, three surfaces — extension on the web, app on your phone, and Kuber speaking across both. We didn't build a Bloomberg terminal made simpler. We built the first portfolio tool designed for someone who's never done this before, and we made every recommendation explain itself."
 
+## Demo readiness vs codebase (May 2026)
+
+What is **already in the repo:** extension contextual Kuber (`apps/extension`), floating Kuber widget, `/api/kuber/chat` (+ speak when keys exist), full `/home` → `/panic` → `/rebalance` path with engine math and Supabase confirm, `/extension` marketing page.
+
+**Still open — match to owners:**
+
+| Owner | Gap | Impact on this script |
+|---|---|---|
+| **Person 1** | **`/settings` Save** does not write to Supabase yet | Demo rarely opens Settings; **fix before claiming “preferences persist.”** |
+| **Person 4** | **`DEMO.md` demo-day rules below** — especially **backup recording** and **locked Chrome profile** | If live flakes, switch to recording **without apology** per rules. |
+
+All other beats should be rehearsable against current `adarsh` / mainline builds with keys and seed data.
+
+---
+
 ## Demo-day rules
 
 - **Recorded backup video:** Person 4 owns this. Record the full flow the night before. If anything flakes live, switch to the recording.

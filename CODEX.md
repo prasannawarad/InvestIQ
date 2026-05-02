@@ -76,7 +76,12 @@ If `pnpm dev` fails: Node ≥20, pnpm ≥9, then `pnpm install` again.
 | 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /panic, /settings, /profile, /help, /extension info page | Paste Figma Make code into apps/web/src/app/*, wire to Supabase + tokens |
 | 2 — Kuber | `packages/kuber`, /Kuber discovery page, floating widget, voice integration | Implement `chat()` against Groq with streaming |
 | 3 — Engine | `packages/engine`, `/rebalance`, engine API routes, all math incl. `generateMatches` | **Shipped:** full engine surface + rebalance UI, Supabase **Confirm changes**, deep links `?source=panic` \| `?source=scenario` \| `&name=market-drop-20` (see `PROJECT_SPEC` §3.5) |
-| 4 — Extension + polish | `apps/extension`, demo flow integration, recorded backup video | Get Plasmo overlay rendering on a real third-party page |
+| 4 — Extension + polish | `apps/extension`, demo flow integration, recorded backup video | **Shipped:** Plasmo bubble + panel, contextual chat → `/api/kuber/chat`. **Remaining:** **`DEMO.md`** — backup video, locked profile, group dry runs (process, not missing extension code). |
+
+**Remaining scope (explicit):**
+
+- **Person 1:** **`/settings` Save → Supabase** (`settings/page.tsx` loads prefs only).
+- **Person 4:** **Execute `DEMO.md`** demo-day rules (§11 ties to Person 4 for the recording).
 
 ---
 
@@ -166,6 +171,8 @@ Don't upgrade mid-hackathon. If a dep breaks, downgrade and fix forward.
 ---
 
 ## 11. When the demo gets close
+
+Repo status recap: Person 3 rebalance path is coded; Person 4 extension ships; Person 1 must wire **`/settings` persistence** before claiming full shell completeness. Judges care about **`DEMO.md`** fidelity — Person 4 still owns **recording + profile lock** regardless of feature completeness.
 
 24 hours before:
 
