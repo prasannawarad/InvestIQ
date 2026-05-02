@@ -5,7 +5,7 @@ import type { UniverseCandidate } from "@investiq/engine";
 import { computeFitScore, getUniverseCandidateBySymbol } from "@investiq/engine";
 import { Info, Volume2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { mapDashboardToUserProfile } from "../../../../lib/engineAdapter";
@@ -181,7 +181,6 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
     const holdName = candidate?.name;
     const holdSymbol = candidate?.symbol;
     if (!termStat || !holdName || !holdSymbol) {
-      setLlmExplain(null);
       return;
     }
     const termKey: StatKey = termStat;
@@ -220,7 +219,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             ← Back to discovery
           </Link>
           <p className="mt-6" style={{ color: colors.coral }}>
-            Unknown discovery code "{symbol.toUpperCase()}". Refresh matches from /Kuber.
+            Unknown discovery code {`"${symbol.toUpperCase()}"`}. Refresh matches from /Kuber.
           </p>
         </div>
       </main>

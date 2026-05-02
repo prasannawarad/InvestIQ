@@ -108,7 +108,6 @@ export default function HoldingDetailPage() {
     const termStat = activeInfo;
     const hold = model;
     if (!termStat || !hold) {
-      setLlmExplain(null);
       return;
     }
 

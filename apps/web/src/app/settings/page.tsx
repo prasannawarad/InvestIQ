@@ -111,10 +111,6 @@ export default function SettingsPage() {
 
     if (!user?.id) {
       loadedForUserRef.current = undefined;
-      setTone("Friendly and simple");
-      setNotifications("Weekly");
-      setRisk(5);
-      setVoice(true);
       return undefined;
     }
 

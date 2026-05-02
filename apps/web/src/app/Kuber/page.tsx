@@ -4,7 +4,7 @@ import type { DiscoveryFilters, MatchCandidate } from "@investiq/engine";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { applyDiscoveryCommit } from "../../lib/applyDiscoveryCommit";
@@ -53,8 +53,9 @@ const INDUSTRY_OPTIONS: { label: string; slug: string }[] = [
   { label: "Cash funds", slug: "money_market" },
 ];
 
-const SIZE_SLUGS = ["small", "medium", "large"] as const;
-const SIZE_OPTIONS: { label: string; slug: (typeof SIZE_SLUGS)[number] }[] = [
+type SizeSlug = "small" | "medium" | "large";
+
+const SIZE_OPTIONS: { label: string; slug: SizeSlug }[] = [
   { label: "Small", slug: "small" },
   { label: "Medium", slug: "medium" },
   { label: "Large", slug: "large" },
@@ -105,7 +106,7 @@ function buildFiltersForApi(input: {
   budget: number;
   risk: RiskLevel;
   industries: Set<string>;
-  sizes: Set<(typeof SIZE_SLUGS)[number]>;
+  sizes: Set<SizeSlug>;
   geo: Set<"domestic" | "international">;
   assets: Set<"equity" | "debt" | "gold" | "cash">;
   keywords: Set<string>;
@@ -139,7 +140,7 @@ export default function KuberPage() {
 
   const [selectedIndustries, setSelectedIndustries] = useState(() => new Set<string>());
   const [selectedSizes, setSelectedSizes] = useState(
-    () => new Set<(typeof SIZE_SLUGS)[number]>(["small", "medium", "large"]),
+    () => new Set<SizeSlug>(["small", "medium", "large"]),
   );
   const [selectedGeo, setSelectedGeo] = useState(
     () => new Set<"domestic" | "international">(["domestic", "international"]),
@@ -172,7 +173,7 @@ export default function KuberPage() {
     };
   }, [user?.id]);
 
-  const startDiscovery = useCallback(async () => {
+  async function startDiscovery() {
     if (!user?.id) {
       toast.error("Sign in to run discovery.");
       return;
@@ -230,16 +231,7 @@ export default function KuberPage() {
     } finally {
       setMatchesLoading(false);
     }
-  }, [
-    user?.id,
-    budget,
-    riskMode,
-    selectedIndustries,
-    selectedSizes,
-    selectedGeo,
-    selectedAssets,
-    selectedKeywords,
-  ]);
+  }
 
   async function confirmDiscovery() {
     if (!user?.id) {
@@ -288,7 +280,7 @@ export default function KuberPage() {
             </span>
             {status === "standby" ? (
               <span className="truncate text-sm" style={{ color: colors.textMuted }}>
-                · Rankings from @investiq/engine (mock universe) — not Groq
+                · Rankings from @investiq/engine
               </span>
             ) : (
               <span className="truncate text-sm" style={{ color: `${colors.onAccent}e6` }}>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { investiqCardStyle } from "../../lib/investiqUi";
-import { InvestiqButton } from "../components/investiq/InvestiqButton";
 
 const glossary = [
   { term: "P/E Ratio", def: "How much investors pay for each dollar of company earnings." },
@@ -69,13 +68,6 @@ export default function HelpPage() {
           </div>
         </section>
 
-        <section className="p-8" style={investiqCardStyle()}>
-          <h2 className="mb-4 text-2xl" style={{ color: colors.text }}>Contact us</h2>
-          <p className="mb-6 text-sm" style={{ color: colors.textMuted }}>Need help with the demo flow? Reach out to support.</p>
-          <InvestiqButton type="button" variant="primary">
-            Get in touch
-          </InvestiqButton>
-        </section>
       </div>
     </main>
   );
