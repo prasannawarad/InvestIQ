@@ -29,13 +29,29 @@ Result includes: projected total value, projected allocation, per-goal timeline 
 
 ### `recommendRebalance(portfolio, target, source) → RebalanceRecommendation`
 
-Compare current allocation to target. If drift > 5pp on any class, generate trades to fix.
+Generates specific trades to bring a portfolio back in line with its target allocation. 
 
-Source flag tells the narrator (Kuber) the context:
-- `drift` — routine "your allocation drifted, here's the fix"
-- `scenario` — "given the scenario you ran, here's what I'd do"
-- `panic` — bias toward more conservative trades, smaller moves
-- `discover` — output trades to add new money, not move existing
+**How Rebalancing Works (in Layman's Terms):**
+When you set up a portfolio, you have a blueprint (e.g., 70% stocks, 30% bonds). Over time, as markets move, some pieces grow faster than others, causing your portfolio to "drift" from its blueprint. The engine calculates exactly what to buy and sell to fix this, but adapts its strategy based on the `source` (the context of *why* we are rebalancing):
+
+- `drift` (Routine Tune-up)
+  - **The Trigger:** An asset class has drifted by 5% or more from its target.
+  - **The Action:** It sells exactly enough of the "overweight" winners to buy the "underweight" losers, restoring the portfolio back to 100% of the target blueprint.
+
+- `scenario` (Stress-Testing)
+  - **The Trigger:** You just ran a "What-If" scenario (e.g., a 30% market crash) and want to know how Kuber would fix the damage.
+  - **The Action:** It still uses a 5% drift threshold, but it only corrects **85%** of the gap. This prevents the engine from making massive, over-confident trades based purely on a hypothetical simulation.
+
+- `panic` (Damage Control)
+  - **The Trigger:** You are reacting to scary real-world news and hit the "Panic" button.
+  - **The Action:** It uses a tighter threshold (3%) to catch smaller drifts, but only corrects **60%** of the gap. Why? Because panicking often leads to terrible timing (selling at the bottom). By intentionally doing a "partial" rebalance, the engine safely trims risk without locking in massive losses. It forces you to take small, defensive steps rather than blowing up your portfolio.
+
+- `discover` (New Money)
+  - **The Trigger:** You have fresh cash to invest.
+  - **The Action:** Instead of selling anything, the engine simulates having a 3% "new money" budget and buys *only* the asset classes where you are underweight. No forced selling, just filling in the gaps.
+
+**The Math Under the Hood:**
+After calculating the dollar amount to move between asset classes, the engine deterministically picks the specific holdings to sell or buy. It scales the "buy" amounts to perfectly match the available cash from the "sells". Finally, it calculates the estimated **tax cost** (e.g., assuming a 10% hit on long-term gains) and the **goal impact** (how these trades will delay or speed up your goals).
 
 ### `computeFitScore(holding, userProfile) → number (0-100)`
 
@@ -44,6 +60,27 @@ How well does this holding fit the user's current goals and risk profile?
 Inputs: holding's risk profile (derived from asset_class + sector), user's risk_tolerance, time to nearest goal, current weight vs. recommended weight.
 
 Output: integer 0-100. UI uses thresholds — green ≥80, amber 60-79, red <60.
+
+### `computePortfolioHealth(portfolio, userProfile) → PortfolioHealth`
+
+Calculates the overall health score of the portfolio (0-100) using a weighted average of three main components. Think of it like a routine medical checkup for your portfolio:
+
+1. **Personal Fit (60% Weight)**
+   *The "Does this actually make sense for YOU?" test.*
+   We check every single investment you own to see if it belongs in your portfolio based on your life situation (timeline, risk tolerance, over-concentration).
+
+2. **Sticking to the Plan (30% Weight)**
+   *The "Are you drifting off course?" test.*
+   Measures how strictly you are sticking to your original target allocation. The further you drift away from your plan, the lower this score gets.
+
+3. **Diversification (10% Weight)**
+   *The "Don't put all your eggs in one basket" test.*
+   Checks if you have a healthy mix of different *categories* of investments (like stocks, bonds, gold, and cash). Spreading money out gives a perfect score, while being 100% in one bucket drops the score.
+
+The final score provides a simple verdict:
+- **80 to 100 (Strong):** Portfolio is perfectly matched to life goals.
+- **70 to 79 (Good):** Generally on track, minor tweaks needed.
+- **Below 70 (Needs Attention):** Drifted too far, or taking on too much risk.
 
 ### `computeGoalImpact(portfolio, trades, goals) → GoalImpact[]`
 

@@ -1,4 +1,5 @@
 import type { MarketContext, Portfolio, UserProfile } from "@investiq/data";
+import { computePortfolioHealth } from "@investiq/engine";
 
 /** Structured context block appended to Kuber's system message (adapted from `agent/user_context.py`). */
 export function serializeKuberContext(parts: {
@@ -39,7 +40,10 @@ export function serializeKuberContext(parts: {
   lines.push(`Portfolio (${portfolio.portfolio_id}), as-of ${portfolio.as_of}`);
   lines.push(`  Total value: USD ${Math.round(s.total_value)}`);
   lines.push(`  Invested / returns / day change %: ${s.total_invested} | ${s.total_returns} | ${s.day_change_percent}%`);
-  lines.push(`  Health score: ${s.health_score}`);
+  const health = computePortfolioHealth(portfolio, userProfile);
+  lines.push(
+    `  Health score (engine-derived): ${health.score} (${health.verdict}) — avg fit ${health.components.avg_fit}, allocation fit ${health.components.allocation_fit}, diversification ${health.components.diversification}, total drift ${health.components.total_drift_pp}pp`,
+  );
   const a = portfolio.allocation.by_asset_class;
   lines.push(
     `  Current allocation equity/debt/gold/cash (%): ${a.equity}% / ${a.debt}% / ${a.gold}% / ${a.cash}%`,

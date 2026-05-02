@@ -464,6 +464,76 @@ export function computeFitScore(holding: Holding, userProfile: UserProfile): num
 }
 
 // ---------------------------------------------------------------------------
+// Portfolio health — aggregate of per-holding fit, allocation alignment, breadth
+// ---------------------------------------------------------------------------
+
+export interface PortfolioHealth {
+  score: number;
+  verdict: "Strong" | "Good" | "Needs attention";
+  components: {
+    avg_fit: number;
+    allocation_fit: number;
+    diversification: number;
+    total_drift_pp: number;
+  };
+}
+
+export function computePortfolioHealth(
+  portfolio: Portfolio,
+  userProfile: UserProfile,
+): PortfolioHealth {
+  const holdings = portfolio.holdings ?? [];
+  const totalValue = holdings.reduce(
+    (sum, h) => sum + Number(h.current_value ?? 0),
+    0,
+  );
+
+  let avgFit = 70;
+  if (totalValue > 0) {
+    const weightedFit = holdings.reduce((sum, h) => {
+      const fit = computeFitScore(h, userProfile);
+      const weight = Number(h.current_value ?? 0) / totalValue;
+      return sum + fit * weight;
+    }, 0);
+    avgFit = clamp(weightedFit, 0, 100);
+  }
+
+  const current = portfolio.allocation.by_asset_class as Record<string, number>;
+  const target = portfolio.allocation.target_allocation as Record<string, number>;
+  let totalDrift = 0;
+  for (const ac of KNOWN_ASSET_CLASSES) {
+    const c = Number(current[ac] ?? 0);
+    const t = Number(target[ac] ?? 0);
+    totalDrift += Math.abs(c - t);
+  }
+  const allocationFit = clamp(100 - totalDrift * 2, 0, 100);
+
+  const meaningful = KNOWN_ASSET_CLASSES.filter(
+    (ac) => Number(current[ac] ?? 0) >= 5,
+  ).length;
+  const diversification =
+    meaningful >= 4 ? 100 : meaningful === 3 ? 90 : meaningful === 2 ? 65 : 35;
+
+  const score = Math.round(
+    clamp(avgFit * 0.6 + allocationFit * 0.3 + diversification * 0.1, 0, 100),
+  );
+
+  const verdict: PortfolioHealth["verdict"] =
+    score >= 80 ? "Strong" : score >= 70 ? "Good" : "Needs attention";
+
+  return {
+    score,
+    verdict,
+    components: {
+      avg_fit: Math.round(avgFit),
+      allocation_fit: Math.round(allocationFit),
+      diversification: Math.round(diversification),
+      total_drift_pp: Math.round(totalDrift * 10) / 10,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Goal impact — Person 3 implements
 // ---------------------------------------------------------------------------
 

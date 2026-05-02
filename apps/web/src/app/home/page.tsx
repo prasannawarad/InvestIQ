@@ -14,6 +14,8 @@ import { PortfolioStatDeck } from "../components/investiq/PortfolioStatDeck";
 import { useAuth } from "../components/auth/AuthProvider";
 import { supabase } from "../../lib/supabase";
 import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
+import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
+import { computePortfolioHealth } from "@investiq/engine";
 
 const askKuberQuestions = [
   "Am I at risk?",
@@ -162,8 +164,11 @@ export default function HomePage() {
         const dayChangeType: "positive" | "negative" | "neutral" =
           dayChangePercent > 0 ? "positive" : dayChangePercent <= -2 ? "negative" : "neutral";
 
-        const healthScore = Number(summary.health_score ?? 0);
-        const healthVerdict = healthScore >= 80 ? "Strong" : healthScore >= 70 ? "Good" : "Needs attention";
+        const enginePortfolio = mapDashboardToPortfolio(data);
+        const engineProfile = mapDashboardToUserProfile(data);
+        const health = computePortfolioHealth(enginePortfolio, engineProfile);
+        const healthScore = health.score;
+        const healthVerdict = health.verdict;
 
         const topHoldings = data.holdings.slice(0, 3).map((holding) => ({
           id: holding.symbol,
