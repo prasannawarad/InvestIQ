@@ -57,14 +57,17 @@ export function KuberOrb({ size = "md", className = "" }: { size?: "sm" | "md" |
 
   if (floatingChatOpen) {
     return (
-      <div className={`relative shrink-0 ${className}`} style={{ contain: "layout paint" }}>
+      <div className={`relative shrink-0 ${className}`} style={{ contain: "layout paint", borderRadius: "9999px" }}>
         <KuberOrbStatic size={size} dim={dim} />
       </div>
     );
   }
 
   return (
-    <div className={`relative shrink-0 ${className}`} style={{ width: dim, height: dim, contain: "layout paint" }}>
+    <div
+      className={`relative shrink-0 ${className}`}
+      style={{ width: dim, height: dim, contain: "layout paint", borderRadius: "9999px" }}
+    >
       <motion.div
         className="absolute inset-2 rounded-full opacity-75 blur-xl"
         style={{
