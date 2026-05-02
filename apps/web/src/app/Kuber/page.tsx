@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type { DiscoveryFilters, MatchCandidate } from "@investiq/engine";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import { applyDiscoveryCommit } from "../../lib/applyDiscoveryCommit";
+import { getDashboardData } from "../../lib/supabaseData";
+import { supabase } from "../../lib/supabase";
 import {
   investiqButtonStyle,
   investiqFieldStyle,
@@ -10,14 +16,14 @@ import {
   investiqCardStyle,
   investiqOnAccentSolidCtaStyle,
   investiqOnAccentToolbarStyle,
+  investiqTabStyle,
 } from "../../lib/investiqUi";
-import type { MatchCandidate } from "@investiq/engine";
-import { useAuth } from "../components/auth/AuthProvider";
-import { supabase } from "../../lib/supabase";
-import { getDashboardData } from "../../lib/supabaseData";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
+import { useAuth } from "../components/auth/AuthProvider";
 
 type Status = "standby" | "running";
+
+type RiskLevel = "low" | "medium" | "high";
 
 type Match = {
   id: string;
@@ -29,6 +35,47 @@ type Match = {
   score: number;
   why: string[];
 };
+
+type BasketLine = { id: string; name: string; logo: string; amount: number };
+
+const INDUSTRY_OPTIONS: { label: string; slug: string }[] = [
+  { label: "Tech", slug: "technology" },
+  { label: "Finance", slug: "financials" },
+  { label: "Healthcare", slug: "healthcare" },
+  { label: "Energy", slug: "energy" },
+  { label: "Consumer", slug: "consumer" },
+  { label: "Agri", slug: "agriculture" },
+  { label: "Infra", slug: "infrastructure" },
+  { label: "Industrials", slug: "industrials" },
+  { label: "Bonds", slug: "fixed_income" },
+  { label: "Commodities", slug: "commodities" },
+  { label: "Cash funds", slug: "money_market" },
+];
+
+const SIZE_SLUGS = ["small", "medium", "large"] as const;
+const SIZE_OPTIONS: { label: string; slug: (typeof SIZE_SLUGS)[number] }[] = [
+  { label: "Small", slug: "small" },
+  { label: "Medium", slug: "medium" },
+  { label: "Large", slug: "large" },
+];
+
+const GEO_OPTIONS: { label: string; slug: "domestic" | "international" }[] = [
+  { label: "Domestic", slug: "domestic" },
+  { label: "International", slug: "international" },
+];
+
+const ASSET_OPTIONS: { label: string; slug: "equity" | "debt" | "gold" | "cash" }[] = [
+  { label: "Stocks", slug: "equity" },
+  { label: "Bonds", slug: "debt" },
+  { label: "Gold", slug: "gold" },
+  { label: "Cash", slug: "cash" },
+];
+
+const KEYWORD_OPTIONS = [
+  { label: "Quality", slug: "quality" },
+  { label: "Defensive", slug: "defensive" },
+  { label: "Diversified", slug: "diversified" },
+];
 
 function getFirstName(fullName: string | null | undefined): string {
   const name = fullName?.trim();
@@ -46,18 +93,63 @@ function toTitleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function toggleSetMember<T extends string>(set: Set<T>, key: T): Set<T> {
+  const next = new Set(set);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  return next;
+}
+
+function buildFiltersForApi(input: {
+  budget: number;
+  risk: RiskLevel;
+  industries: Set<string>;
+  sizes: Set<(typeof SIZE_SLUGS)[number]>;
+  geo: Set<"domestic" | "international">;
+  assets: Set<"equity" | "debt" | "gold" | "cash">;
+  keywords: Set<string>;
+}): DiscoveryFilters {
+  return {
+    money_to_invest: input.budget,
+    per_position_cap: Math.max(100, Math.round(input.budget / 3)),
+    industries: [...input.industries],
+    sizes: input.sizes.size ? [...input.sizes] : [],
+    risk: input.risk,
+    asset_classes: input.assets.size ? [...input.assets] : [],
+    geography: input.geo.size ? [...input.geo] : [],
+    keywords: [...input.keywords],
+  };
+}
+
 export default function KuberPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("standby");
   const [showFilters, setShowFilters] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [basket, setBasket] = useState<{ id: string; name: string; logo: string; amount: number }[]>([]);
+  const [basket, setBasket] = useState<BasketLine[]>([]);
   const [budget, setBudget] = useState(500);
   const [profileName, setProfileName] = useState(getFirstName(user?.user_metadata?.full_name));
   const [equityShare, setEquityShare] = useState(65);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [matchesError, setMatchesError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const [selectedIndustries, setSelectedIndustries] = useState(() => new Set<string>());
+  const [selectedSizes, setSelectedSizes] = useState(
+    () => new Set<(typeof SIZE_SLUGS)[number]>(["small", "medium", "large"]),
+  );
+  const [selectedGeo, setSelectedGeo] = useState(
+    () => new Set<"domestic" | "international">(["domestic", "international"]),
+  );
+  const [selectedAssets, setSelectedAssets] = useState(
+    () => new Set<"equity" | "debt" | "gold" | "cash">(["equity", "debt", "gold", "cash"]),
+  );
+  const [selectedKeywords, setSelectedKeywords] = useState(
+    () => new Set<string>(["defensive", "diversified", "quality"]),
+  );
+  const [riskMode, setRiskMode] = useState<"profile" | RiskLevel>("profile");
 
   useEffect(() => {
     let mounted = true;
@@ -79,8 +171,11 @@ export default function KuberPage() {
     };
   }, [user?.id]);
 
-  async function startDiscovery() {
-    if (!user?.id) return;
+  const startDiscovery = useCallback(async () => {
+    if (!user?.id) {
+      toast.error("Sign in to run discovery.");
+      return;
+    }
     setStatus("running");
     setMatchesLoading(true);
     setMatchesError(null);
@@ -89,21 +184,24 @@ export default function KuberPage() {
       const data = await getDashboardData(supabase, user.id);
       const portfolio = mapDashboardToPortfolio(data);
       const userProfile = mapDashboardToUserProfile(data);
+      const risk: RiskLevel =
+        riskMode === "profile" ? userProfile.risk_profile.risk_tolerance : riskMode;
+
+      const filters = buildFiltersForApi({
+        budget,
+        risk,
+        industries: selectedIndustries,
+        sizes: selectedSizes,
+        geo: selectedGeo,
+        assets: selectedAssets,
+        keywords: selectedKeywords,
+      });
 
       const response = await fetch("/api/engine/matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filters: {
-            money_to_invest: budget,
-            per_position_cap: Math.max(100, Math.round(budget / 3)),
-            industries: ["technology", "financials", "healthcare", "energy", "consumer"],
-            sizes: ["medium", "large"],
-            risk: userProfile.risk_profile.risk_tolerance,
-            asset_classes: ["equity", "debt", "gold"],
-            geography: ["domestic", "international"],
-            keywords: ["defensive", "diversified", "quality"],
-          },
+          filters,
           userProfile,
           portfolio,
         }),
@@ -131,6 +229,43 @@ export default function KuberPage() {
     } finally {
       setMatchesLoading(false);
     }
+  }, [
+    user?.id,
+    budget,
+    riskMode,
+    selectedIndustries,
+    selectedSizes,
+    selectedGeo,
+    selectedAssets,
+    selectedKeywords,
+  ]);
+
+  async function confirmDiscovery() {
+    if (!user?.id) {
+      toast.error("Sign in to save holdings.");
+      return;
+    }
+    if (basket.length === 0) {
+      toast.error("Add at least one discovery position first.");
+      return;
+    }
+    setConfirming(true);
+    try {
+      const dash = await getDashboardData(supabase, user.id);
+      await applyDiscoveryCommit(
+        dash,
+        basket.map((b) => ({ symbol: b.id, amount_usd: b.amount })),
+      );
+      toast.success("Discovery saved to your portfolio.", { description: "Supabase holdings updated — Kubers pulls them on refresh." });
+      setBasket([]);
+      setMatches([]);
+      setStatus("standby");
+      router.push("/home");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save discovery.");
+    } finally {
+      setConfirming(false);
+    }
   }
 
   const used = useMemo(() => basket.reduce((sum, item) => sum + item.amount, 0), [basket]);
@@ -145,25 +280,28 @@ export default function KuberPage() {
           borderColor: colors.border,
         }}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="text-sm font-semibold" style={{ color: status === "standby" ? colors.text : colors.onAccent }}>
-            {status === "standby" ? "Standby" : "Running"}
-          </span>
-          {status === "standby" ? (
-            <span className="truncate text-sm" style={{ color: colors.textMuted }}>
-              · Configure your filters to start
+        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold" style={{ color: status === "standby" ? colors.text : colors.onAccent }}>
+              {status === "standby" ? "Standby" : "Running"}
             </span>
-          ) : (
-            <span className="truncate text-sm" style={{ color: `${colors.onAccent}e6` }}>
-              · {basket.length} holdings · ${used} of ${budget} used · ${remaining} left
-            </span>
-          )}
+            {status === "standby" ? (
+              <span className="truncate text-sm" style={{ color: colors.textMuted }}>
+                · Rankings from @investiq/engine (mock universe) — not Groq
+              </span>
+            ) : (
+              <span className="truncate text-sm" style={{ color: `${colors.onAccent}e6` }}>
+                · {basket.length} line{basket.length === 1 ? "" : "s"} · ${used} / ${budget} · ${remaining} left
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => setShowFilters(true)}
+            disabled={!user?.id}
             className="flex items-center gap-2"
             style={status === "standby" ? investiqButtonStyle("secondary", { size: "sm" }) : investiqOnAccentToolbarStyle()}
           >
@@ -172,10 +310,9 @@ export default function KuberPage() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              void startDiscovery();
-            }}
-            className="flex items-center gap-2"
+            onClick={() => void startDiscovery()}
+            disabled={!user?.id || matchesLoading}
+            className="flex items-center gap-2 disabled:opacity-50"
             style={status === "standby" ? investiqButtonStyle("primary", { size: "sm" }) : investiqOnAccentSolidCtaStyle()}
           >
             <Play className="h-4 w-4" />
@@ -183,6 +320,17 @@ export default function KuberPage() {
           </button>
         </div>
       </div>
+
+      {!user?.id ? (
+        <p className="mx-8 mt-6 text-sm" style={{ color: colors.coral }}>
+          Sign in — discovery reads your allocations and persists new holdings to Supabase after confirm.
+        </p>
+      ) : (
+        <p className="mx-8 mt-4 text-xs" style={{ color: colors.textMuted }}>
+          Matches = deterministic <code>generateMatches</code> inside <code>@investiq/engine</code>. Kubers <em>dialogue</em> still runs on Groq
+          elsewhere; this surface only consumes engine JSON plus your filters.
+        </p>
+      )}
 
       <div className="flex gap-8 px-8 py-8">
         <section className="w-[40%]">
@@ -192,16 +340,17 @@ export default function KuberPage() {
                 Hi {profileName}. Let&apos;s find new investments.
               </h2>
               <p className="mb-6 text-sm" style={{ color: colors.textMuted }}>
-                You are currently around {equityShare}% in equities. Open Filters, set your budget and preferences, then start discovery.
+                You are currently around {equityShare}% in equities. Open filters (industries, sizes, geography, sleeve), set budget,
+                Start — then add mock-universe picks; Review & Confirm writes rows to Postgres.
               </p>
-              <button type="button" onClick={() => setShowFilters(true)} className="w-full" style={investiqButtonStyle("primary", { fullWidth: true })}>
+              <button type="button" onClick={() => setShowFilters(true)} disabled={!user?.id} className="w-full disabled:opacity-50" style={investiqButtonStyle("primary", { fullWidth: true })}>
                 Open Filters
               </button>
             </div>
           ) : (
             <div className="sticky top-24 p-6" style={investiqCardStyle()}>
               <h3 className="mb-4 text-lg" style={{ color: colors.text }}>
-                Holdings in your basket
+                Pending basket (not invested until confirm)
               </h3>
               <div className="mb-6 space-y-3">
                 {basket.map((item) => (
@@ -220,15 +369,21 @@ export default function KuberPage() {
                       <div className="truncate text-sm" style={{ color: colors.text }}>
                         {item.name}
                       </div>
-                      <div className="text-xs" style={{ color: colors.textMuted }}>
-                        ${item.amount}
+                      <div className="text-xs font-mono" style={{ color: colors.textMuted }}>
+                        {item.id} · ${item.amount}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <button type="button" className="w-full" style={investiqButtonStyle("primary", { fullWidth: true })}>
-                Review & Confirm
+              <button
+                type="button"
+                className="w-full disabled:opacity-60"
+                style={investiqButtonStyle("primary", { fullWidth: true })}
+                disabled={confirming || !user?.id}
+                onClick={() => void confirmDiscovery()}
+              >
+                {confirming ? "Saving…" : "Review & Confirm"}
               </button>
             </div>
           )}
@@ -236,15 +391,15 @@ export default function KuberPage() {
 
         <section className="w-[60%]">
           <h3 className="mb-6 text-xl" style={{ color: colors.text }}>
-            Top Matches
+            Top matches
           </h3>
           {status === "standby" ? (
             <div className="py-20 text-center" style={{ color: colors.textMuted }}>
-              Set your filters and click Start.
+              Set filters and Start — payloads now include industries, sleeves, geography, keywords, risk.
             </div>
           ) : matchesLoading ? (
             <div className="py-20 text-center" style={{ color: colors.textMuted }}>
-              Generating matches...
+              Ranking mock universe candidates…
             </div>
           ) : matchesError ? (
             <div className="py-20 text-center" style={{ color: colors.coral }}>
@@ -252,16 +407,12 @@ export default function KuberPage() {
             </div>
           ) : matches.length === 0 ? (
             <div className="py-20 text-center" style={{ color: colors.textMuted }}>
-              No matches for current filters.
+              No matches for current filters — loosen industries or sizing.
             </div>
           ) : (
             <div className="space-y-6">
               {matches.map((match) => (
-                <article
-                  key={match.id}
-                  className="p-6"
-                  style={investiqCardStyle()}
-                >
+                <article key={match.id} className="p-6" style={investiqCardStyle()}>
                   <div className="mb-4 flex items-start justify-between">
                     <div className="flex items-start gap-4">
                       <div
@@ -274,15 +425,12 @@ export default function KuberPage() {
                         <h4 className="mb-1 text-xl" style={{ color: colors.text, fontFamily: typography.serif }}>
                           {match.name}
                         </h4>
-                        <div className="text-sm" style={{ color: colors.textMuted }}>
-                          {match.industry} · {match.size} · {match.location}
+                        <div className="text-sm font-mono" style={{ color: colors.textMuted }}>
+                          {match.id} · {match.industry} · {match.size} · {match.location}
                         </div>
                       </div>
                     </div>
-                    <div
-                      className="rounded-full px-3 py-1 text-sm"
-                      style={{ color: colors.green, backgroundColor: `${colors.green}22` }}
-                    >
+                    <div className="rounded-full px-3 py-1 text-sm" style={{ color: colors.green, backgroundColor: `${colors.green}22` }}>
                       {match.score}%
                     </div>
                   </div>
@@ -308,16 +456,25 @@ export default function KuberPage() {
                   <div className="flex justify-end">
                     <button
                       type="button"
+                      disabled={remaining <= 0 || !user?.id}
                       onClick={() => {
-                        if (remaining <= 0) return;
+                        if (remaining <= 0 || !user?.id) return;
                         const amount = Math.min(100, remaining);
-                        setBasket((prev) => [...prev, { id: match.id, name: match.name, logo: match.logo, amount }]);
+                        setBasket((prev) => {
+                          const idx = prev.findIndex((p) => p.id === match.id);
+                          if (idx >= 0) {
+                            const copy = [...prev];
+                            copy[idx] = { ...copy[idx], amount: copy[idx].amount + amount };
+                            return copy;
+                          }
+                          return [...prev, { id: match.id, name: match.name, logo: match.logo, amount }];
+                        });
                       }}
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 disabled:opacity-50"
                       style={investiqButtonStyle("primary", { size: "sm" })}
                     >
                       <Plus className="h-4 w-4" />
-                      Add
+                      Add $100 slice
                     </button>
                   </div>
                 </article>
@@ -331,25 +488,27 @@ export default function KuberPage() {
         <>
           <div className="fixed inset-0 z-40 backdrop-blur-[2px]" style={{ backgroundColor: colors.overlay }} onClick={() => setShowFilters(false)} />
           <aside
-            className="fixed right-0 top-0 bottom-0 z-50 w-[400px] overflow-y-auto"
+            className="fixed top-0 right-0 bottom-0 z-50 w-[400px] overflow-y-auto"
             style={{ backgroundColor: colors.cardBg, boxShadow: shadows.popover }}
           >
             <div className="sticky top-0 flex items-center justify-between p-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
               <h3 className="text-xl" style={{ color: colors.text }}>
                 Filters
               </h3>
-              <button type="button" onClick={() => setShowFilters(false)}>
+              <button type="button" aria-label="Close filters" onClick={() => setShowFilters(false)}>
                 <X className="h-5 w-5" style={{ color: colors.textMuted }} />
               </button>
             </div>
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-8 p-6">
               <div>
                 <label className="mb-2 block text-sm" style={{ color: colors.text }}>
-                  Money to invest
+                  Money to invest (guides per-position sizing)
                 </label>
                 <input
                   type="number"
+                  min={300}
+                  max={200000}
                   value={budget}
                   onChange={(event) => setBudget(Number(event.target.value || 0))}
                   className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--investiq-accent)]/35"
@@ -357,38 +516,143 @@ export default function KuberPage() {
                 />
               </div>
 
-              <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: "24px" }}>
+              <div>
                 <label className="mb-3 block text-sm" style={{ color: colors.text }}>
-                  Industry / Sector
+                  Risk lens for rankings
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    "Tech",
-                    "Finance",
-                    "Healthcare",
-                    "Energy",
-                    "Consumer",
-                    "Real Estate",
-                    "Industrials",
-                  ].map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      style={{ ...investiqFilterChipStyle(false), fontSize: "13px", color: colors.text }}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                  {(
+                    [
+                      ["profile", "Match my profile"] as const,
+                      ["low", "Cautious"] as const,
+                      ["medium", "Balanced"] as const,
+                      ["high", "Bold"] as const,
+                    ]
+                  ).map(([key, label]) => {
+                    const active = riskMode === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() =>
+                          key === "profile" ? setRiskMode("profile") : setRiskMode(key as RiskLevel)
+                        }
+                        style={investiqTabStyle(active)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm" style={{ color: colors.text }}>
+                  Industries (empty = no industry filter — neutral score)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {INDUSTRY_OPTIONS.map(({ label, slug }) => {
+                    const active = selectedIndustries.has(slug);
+                    return (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() => setSelectedIndustries(toggleSetMember(selectedIndustries, slug))}
+                        style={investiqFilterChipStyle(active)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm" style={{ color: colors.text }}>
+                  Company size
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SIZE_OPTIONS.map(({ label, slug }) => {
+                    const active = selectedSizes.has(slug);
+                    return (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() => setSelectedSizes(toggleSetMember(selectedSizes, slug))}
+                        style={investiqFilterChipStyle(active)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm" style={{ color: colors.text }}>
+                  Geography
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {GEO_OPTIONS.map(({ label, slug }) => {
+                    const active = selectedGeo.has(slug);
+                    return (
+                      <button key={slug} type="button" onClick={() => setSelectedGeo(toggleSetMember(selectedGeo, slug))} style={investiqFilterChipStyle(active)}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm" style={{ color: colors.text }}>
+                  Sleeves allowed
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {ASSET_OPTIONS.map(({ label, slug }) => {
+                    const active = selectedAssets.has(slug);
+                    return (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() => setSelectedAssets(toggleSetMember(selectedAssets, slug))}
+                        style={investiqFilterChipStyle(active)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm" style={{ color: colors.text }}>
+                  Style keywords
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {KEYWORD_OPTIONS.map(({ label, slug }) => {
+                    const active = selectedKeywords.has(slug);
+                    return (
+                      <button
+                        key={slug}
+                        type="button"
+                        onClick={() => setSelectedKeywords(toggleSetMember(selectedKeywords, slug))}
+                        style={investiqFilterChipStyle(active)}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             <div
-              className="sticky bottom-0 flex items-center justify-between p-6"
-              style={{ borderTop: `1px solid ${colors.border}`, backgroundColor: colors.cardBg }}
+              className="sticky bottom-0 flex items-center justify-between border-t p-6"
+              style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}
             >
               <button type="button" onClick={() => setShowFilters(false)} style={investiqButtonStyle("ghost", { size: "sm" })}>
-                Cancel
+                Close
               </button>
               <button
                 type="button"

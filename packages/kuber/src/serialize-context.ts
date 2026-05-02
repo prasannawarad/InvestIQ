@@ -17,7 +17,10 @@ export function serializeKuberContext(parts: {
     `${id.name}, age ${id.age}, ${id.occupation} in ${id.location}. Currency: ${id.currency}.`,
   );
   lines.push(
-    `${rp.persona_label} (risk score ${rp.risk_score}/10). Preferences: tone ${userProfile.preferences.communication_tone}, depth ${userProfile.preferences.explanation_depth}.`,
+    `${rp.persona_label} persona (risk score ${rp.risk_score}/10, capacity ${rp.risk_capacity}, tolerance ${rp.risk_tolerance}). Preferences: communication_tone="${userProfile.preferences.communication_tone}", explanation_depth="${userProfile.preferences.explanation_depth}".`,
+  );
+  lines.push(
+    `KUBER VOICE LOCK-IN — adapt reply shape to tone without breaking global persona rules above: friendly_simple uses warm sibling cadence with light fillers (okay, hm, honestly); direct_concise uses shorter clauses and fewer asides; detailed_explanations favors crisp definitions and one extra clause when clarity needs it—but still obey sentence-cap rules in your system prompt.`,
   );
   lines.push(
     `Income USD ${fc.annual_income}/yr, saves ~USD ${fc.monthly_savings_capacity}/mo, ${fc.dependents} dependents, ${fc.emergency_fund_months} months emergency.`,
