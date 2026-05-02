@@ -109,19 +109,12 @@ export default function SettingsPage() {
       setVoice(prefsVoiceFromDb(prefs));
     }
 
-    async function run() {
-      if (!user?.id) {
-        loadedForUserRef.current = undefined;
-        setTone("Friendly and simple");
-        setNotifications("Weekly");
-        setRisk(5);
-        setVoice(true);
-        return;
-      }
-      await syncFromDashboard(user.id);
+    if (!user?.id) {
+      loadedForUserRef.current = undefined;
+      return undefined;
     }
 
-    void run().catch(() => {
+    void syncFromDashboard(user.id).catch(() => {
       toast.error("Could not load settings.");
     });
 

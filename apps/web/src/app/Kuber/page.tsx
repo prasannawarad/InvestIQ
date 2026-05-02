@@ -4,7 +4,7 @@ import type { DiscoveryFilters, MatchCandidate } from "@investiq/engine";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { applyDiscoveryCommit } from "../../lib/applyDiscoveryCommit";
@@ -172,7 +172,7 @@ export default function KuberPage() {
     };
   }, [user?.id]);
 
-  const startDiscovery = useCallback(async () => {
+  async function startDiscovery() {
     if (!user?.id) {
       toast.error("Sign in to run discovery.");
       return;
@@ -230,16 +230,7 @@ export default function KuberPage() {
     } finally {
       setMatchesLoading(false);
     }
-  }, [
-    user,
-    budget,
-    riskMode,
-    selectedIndustries,
-    selectedSizes,
-    selectedGeo,
-    selectedAssets,
-    selectedKeywords,
-  ]);
+  }
 
   async function confirmDiscovery() {
     if (!user?.id) {
@@ -288,7 +279,7 @@ export default function KuberPage() {
             </span>
             {status === "standby" ? (
               <span className="truncate text-sm" style={{ color: colors.textMuted }}>
-                · Rankings from @investiq/engine (mock universe) — not Groq
+                · Rankings from @investiq/engine
               </span>
             ) : (
               <span className="truncate text-sm" style={{ color: `${colors.onAccent}e6` }}>

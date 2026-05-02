@@ -220,7 +220,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             ← Back to discovery
           </Link>
           <p className="mt-6" style={{ color: colors.coral }}>
-            Unknown discovery code &quot;{symbol.toUpperCase()}&quot;. Refresh matches from /Kuber.
+            Unknown discovery code {`"${symbol.toUpperCase()}"`}. Refresh matches from /Kuber.
           </p>
         </div>
       </main>
