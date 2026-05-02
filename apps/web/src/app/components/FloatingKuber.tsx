@@ -11,7 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Mic, Send, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
@@ -72,9 +72,36 @@ function toApiTurns(rows: ChatRow[]): { role: "user" | "assistant"; content: str
 
 const FLOATING_KUBER_CUE_GROUPS = [...KUBER_CUE_GROUPS, KUBER_EXTENSION_PAGE_CUES];
 
+/** PROJECT_SPEC routing: scenario / drift language opens Rebalance instead of hallucinating trades in chat. */
+function rebalanceHrefFromPrompt(prompt: string): string | null {
+  const t = prompt.trim().toLowerCase();
+  if (!t) return null;
+
+  if (/market'?s?\s+(drop|fall|crash).{0,26}20|20\s*%/.test(t) || /^what if markets.*?20/.test(t)) {
+    return "/rebalance?source=scenario&name=market-drop-20";
+  }
+  if (/need \$?5,?000|\$5,?000\s+soon|\bwithdrawal\b.*\$5,?000\b/.test(t)) {
+    return "/rebalance?source=scenario&name=withdraw-20-percent";
+  }
+  if (/inflation.*(high|stays|sticky)/.test(t) || /\bsticky inflation\b/.test(t)) {
+    return "/rebalance?source=scenario&name=inflation-stays-high";
+  }
+  if (/\brebalance\b|allocation\s+drift|drift\s+allocation|too\s+risky.*\bstock\b|too\s+much\b.*equity\b/.test(t)) {
+    return "/rebalance?source=scenario";
+  }
+  if (/market'?s?\s+(drop|fall|crash).{0,26}30|30\s*%/.test(t)) {
+    return "/rebalance?source=scenario&name=market-drop-30";
+  }
+  if (/lose.{0,8}job|emergency.?fund.?job\b/.test(t)) {
+    return "/rebalance?source=scenario&name=lose-job-need-emergency";
+  }
+  return null;
+}
+
 export function FloatingKuber() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [isOpen, setIsOpen] = useState(false);
   const mounted = useSyncExternalStore(subscribeToClientMount, mountedOnClient, notMountedServer);
@@ -89,12 +116,9 @@ export function FloatingKuber() {
   const overlayTransition = reduceMotion ? { duration: 0 } : panelTransition;
 
   const isHiddenRoute = useMemo(() => {
-    return (
-      pathname.startsWith("/Kuber") ||
-      pathname.startsWith("/kuber") ||
-      pathname.startsWith("/rebalance") ||
-      pathname === "/panic"
-    );
+    const p = pathname.toLowerCase();
+    if (p.startsWith("/kuber/preview")) return false;
+    return p === "/kuber" || p.startsWith("/rebalance") || p === "/panic";
   }, [pathname]);
 
   /** Tell KuberOrb / other canvases to stop animating before the browser paints the overlay. */
@@ -207,6 +231,26 @@ export function FloatingKuber() {
       const trimmed = trimmedPrompt.trim();
       if (!trimmed || isSending) return;
 
+      const routed = rebalanceHrefFromPrompt(trimmed);
+      if (routed) {
+        const userRow: ChatRow = {
+          id: `user-${Date.now()}`,
+          role: "user",
+          content: trimmed,
+        };
+        const assistantRow: ChatRow = {
+          id: `route-${Date.now()}`,
+          role: "kuber",
+          content: "Let me walk you through that in Rebalance so the math stays deterministic — opening it now.",
+        };
+        const nextThread = [...chatRef.current, userRow, assistantRow];
+        chatRef.current = nextThread;
+        setChatMessages(nextThread);
+        setMessage("");
+        router.push(routed);
+        return;
+      }
+
       const userRow: ChatRow = {
         id: `user-${Date.now()}`,
         role: "user",
@@ -230,6 +274,7 @@ export function FloatingKuber() {
           ...(abort ? { signal: abort } : {}),
           body: JSON.stringify({
             mode: "floating",
+            stream: true,
             messages: toApiTurns(nextThread),
             context: {
               title: typeof document !== "undefined" ? document.title : "InvestIQ",
@@ -272,8 +317,10 @@ export function FloatingKuber() {
         setIsSending(false);
       }
     },
-    [isSending],
+    [isSending, router],
   );
+
+  const showCueChips = !chatMessages.some((message) => message.role === "user");
 
   const lastKuberReply = useMemo(() => {
     for (let i = chatMessages.length - 1; i >= 0; i--) {
@@ -416,37 +463,39 @@ export function FloatingKuber() {
                           </div>
                         )}
 
-                        <div
-                          className="border-t pt-4"
-                          style={{ borderColor: colors.border }}
-                        >
-                          {FLOATING_KUBER_CUE_GROUPS.map((group) => (
-                            <div key={group.label} className="mb-4 last:mb-0">
-                              <div className="mb-2 text-xs uppercase tracking-wide" style={{ color: colors.textMuted }}>
-                                {group.label}
+                        {showCueChips ? (
+                          <div
+                            className="border-t pt-4"
+                            style={{ borderColor: colors.border }}
+                          >
+                            {FLOATING_KUBER_CUE_GROUPS.map((group) => (
+                              <div key={group.label} className="mb-4 last:mb-0">
+                                <div className="mb-2 text-xs uppercase tracking-wide" style={{ color: colors.textMuted }}>
+                                  {group.label}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {group.chips.map((chip) => (
+                                    <button
+                                      key={chip}
+                                      type="button"
+                                      disabled={isSending}
+                                      className="ring-1 transition-transform hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+                                      style={{
+                                        ...investiqFilterChipStyle(false),
+                                        fontSize: "12px",
+                                        padding: "6px 12px",
+                                        borderColor: colors.border,
+                                      }}
+                                      onClick={() => void submitChat(chip)}
+                                    >
+                                      {chip}
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                              <div className="flex flex-wrap gap-2">
-                                {group.chips.map((chip) => (
-                                  <button
-                                    key={chip}
-                                    type="button"
-                                    disabled={isSending}
-                                    className="ring-1 transition-transform hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-                                    style={{
-                                      ...investiqFilterChipStyle(false),
-                                      fontSize: "12px",
-                                      padding: "6px 12px",
-                                      borderColor: colors.border,
-                                    }}
-                                    onClick={() => void submitChat(chip)}
-                                  >
-                                    {chip}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        ) : null}
                         <div ref={chatScrollAnchorRef} className="h-px shrink-0" aria-hidden />
                       </div>
                     </div>

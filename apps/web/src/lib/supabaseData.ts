@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -97,9 +97,10 @@ async function requireData<T>(promise: PromiseLike<{ data: T | null; error: { me
   return data;
 }
 
-export async function getDashboardData(userId: string): Promise<SupabaseDashboardData> {
+/** Works with browser `supabase` or a `@supabase/ssr` route-handler client with the user session. */
+export async function getDashboardData(client: SupabaseClient, userId: string): Promise<SupabaseDashboardData> {
   const profile = (await requireData(
-    supabase
+    client
       .from("profiles")
       .select("id,app_user_id,name,age,occupation,location,currency,financial_context,risk_profile,preferences")
       .eq("id", userId)
@@ -108,7 +109,7 @@ export async function getDashboardData(userId: string): Promise<SupabaseDashboar
   )) as ProfileRow;
 
   const goals = (await requireData(
-    supabase
+    client
       .from("goals")
       .select("id,user_id,external_goal_id,name,target_amount,current_progress,target_date,priority,flexibility")
       .eq("user_id", userId)
@@ -117,7 +118,7 @@ export async function getDashboardData(userId: string): Promise<SupabaseDashboar
   )) as GoalRow[];
 
   const portfolio = (await requireData(
-    supabase
+    client
       .from("portfolios")
       .select("id,user_id,external_portfolio_id,as_of,currency,summary,allocation,risk_metrics")
       .eq("user_id", userId)
@@ -128,7 +129,7 @@ export async function getDashboardData(userId: string): Promise<SupabaseDashboar
   )) as PortfolioRow;
 
   const holdings = (await requireData(
-    supabase
+    client
       .from("holdings")
       .select(
         "id,portfolio_id,user_id,external_holding_id,symbol,name,asset_class,subcategory,sector,quantity,avg_buy_price,current_price,current_value,unrealized_pnl,unrealized_pnl_percent,weight_in_portfolio,metadata"
@@ -138,7 +139,7 @@ export async function getDashboardData(userId: string): Promise<SupabaseDashboar
     "holdings"
   )) as HoldingRow[];
 
-  const { data: marketContextRaw, error: marketContextError } = await supabase
+  const { data: marketContextRaw, error: marketContextError } = await client
     .from("market_contexts")
     .select("id,external_market_context_id,as_of,market_snapshot,macro_context")
     .order("as_of", { ascending: false })
@@ -153,7 +154,7 @@ export async function getDashboardData(userId: string): Promise<SupabaseDashboar
 
   let marketEvents: MarketEventRow[] = [];
   if (marketContext) {
-    const { data: events, error: eventsError } = await supabase
+    const { data: events, error: eventsError } = await client
       .from("market_events")
       .select("id,market_context_id,external_event_id,headline,category,impact,relevance_to_user,plain_summary")
       .eq("market_context_id", marketContext.id)

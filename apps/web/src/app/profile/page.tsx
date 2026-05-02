@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { colors, radii, typography } from "@investiq/ui/tokens";
 import { investiqCardStyle } from "../../lib/investiqUi";
 import { useAuth } from "../components/auth/AuthProvider";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData, type SupabaseDashboardData } from "../../lib/supabaseData";
 
 function toCurrency(value: number): string {
@@ -25,7 +26,7 @@ export default function ProfilePage() {
     async function init() {
       if (!user?.id) return;
       try {
-        const next = await getDashboardData(user.id);
+        const next = await getDashboardData(supabase, user.id);
         if (mounted) {
           setData(next);
           setError(null);

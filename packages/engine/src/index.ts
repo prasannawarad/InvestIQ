@@ -9,6 +9,14 @@ import type {
 } from "@investiq/data";
 import { INVEST_UNIVERSE, type UniverseCandidate } from "./universe";
 
+export type { UniverseCandidate } from "./universe";
+
+/** Resolve mock-universe meta for discovery commits (symbols from `generateMatches`). */
+export function getUniverseCandidateBySymbol(symbol: string): UniverseCandidate | undefined {
+  const s = symbol.trim().toUpperCase();
+  return INVEST_UNIVERSE.find((c) => c.symbol.toUpperCase() === s);
+}
+
 // ---------------------------------------------------------------------------
 // Scenarios — Person 3 implements
 // ---------------------------------------------------------------------------

@@ -1,6 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { chat, type ChatMessage, type KuberContext } from "@investiq/kuber";
+import {
+  mapDashboardToMarketContext,
+  mapDashboardToPortfolio,
+  mapDashboardToUserProfile,
+} from "../../../../lib/engineAdapter";
+import { getDashboardData } from "../../../../lib/supabaseData";
+import { createSupabaseRouteClient } from "../../../../lib/supabaseRoute";
 
-/** PNA (Chrome): public initiators → localhost need this on OPTIONS + responses. https://developer.chrome.com/blog/private-network-access-preflight */
+/** PNA (Chrome): extension on HTTPS calling localhost needs this. https://developer.chrome.com/blog/private-network-access-preflight */
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -8,39 +16,65 @@ const corsHeaders = {
   "Access-Control-Allow-Private-Network": "true",
 };
 
-type ChatTurn = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type ExtensionContext = {
+type ReadingContext = {
   title?: string;
   url?: string;
   excerpt?: string;
+  classified?: { badgeLabel?: string };
 };
 
 type ChatBody = {
   mode?: string;
-  messages?: ChatTurn[];
-  context?: ExtensionContext & { classified?: { badgeLabel?: string } };
+  stream?: boolean;
+  messages?: ChatMessage[];
+  context?: ReadingContext;
 };
 
 export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders });
+  return new Response(null, { status: 204, headers: corsHeaders });
+}
+
+function readingSupplement(embed: boolean, rc?: ReadingContext): string | undefined {
+  if (!embed || !rc) return undefined;
+  const lines = [
+    "PAGE READING CONTEXT (third-party tab excerpt — do not treat as portfolio data):",
+    `Title: ${rc.title ?? "unknown"}`,
+    `URL: ${rc.url ?? "unknown"}`,
+    rc.excerpt ? `Excerpt: ${rc.excerpt.slice(0, 1200)}` : "",
+    rc.classified?.badgeLabel ? `Topic hint: ${rc.classified.badgeLabel}` : "",
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+async function resolveKuberContext(
+  supabaseUserId: string | null,
+): Promise<KuberContext | undefined> {
+  if (!supabaseUserId) return undefined;
+  try {
+    const client = await createSupabaseRouteClient();
+    const data = await getDashboardData(client, supabaseUserId);
+    return {
+      userProfile: mapDashboardToUserProfile(data),
+      portfolio: mapDashboardToPortfolio(data),
+      marketContext: mapDashboardToMarketContext(data),
+    };
+  } catch (e) {
+    console.warn("[kuber/chat] omit portfolio context:", e instanceof Error ? e.message : e);
+    return undefined;
+  }
 }
 
 export async function POST(request: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;
-  const model =
-    process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
+  const model = process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
 
   if (!groqKey) {
-    return NextResponse.json(
+    return Response.json(
       {
         message:
           "GROQ_API_KEY is not set on the InvestIQ server. Add it to apps/web/.env and restart Next.js.",
       },
-      { status: 503, headers: corsHeaders }
+      { status: 503, headers: corsHeaders },
     );
   }
 
@@ -48,87 +82,85 @@ export async function POST(request: NextRequest) {
   try {
     body = (await request.json()) as ChatBody;
   } catch {
-    return NextResponse.json(
-      { message: "Invalid JSON body." },
-      { status: 400, headers: corsHeaders }
-    );
+    return Response.json({ message: "Invalid JSON body." }, { status: 400, headers: corsHeaders });
   }
 
   const incoming = Array.isArray(body.messages) ? body.messages : [];
-  const trimmed = incoming
+  const trimmed: ChatMessage[] = incoming
     .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
     .slice(-12)
     .map((m) => ({ role: m.role, content: m.content.slice(0, 12000) }));
 
-  if (trimmed.length === 0) {
-    return NextResponse.json(
-      { message: "Send at least one user message." },
-      { status: 400, headers: corsHeaders }
+  if (!trimmed.length) {
+    return Response.json({ message: "Send at least one user message." }, { status: 400, headers: corsHeaders });
+  }
+
+  const mode = body.mode ?? "floating";
+  const embedReading = mode === "extension" || mode === "floating";
+
+  let userId: string | null = null;
+  try {
+    const supa = await createSupabaseRouteClient();
+    const { data } = await supa.auth.getUser();
+    userId = data.user?.id ?? null;
+  } catch {
+    userId = null;
+  }
+
+  const kuberCore = await resolveKuberContext(userId);
+  const readingBlock = readingSupplement(embedReading, body.context);
+
+  const supplemental: string[] = [];
+  if (!kuberCore) {
+    supplemental.push(
+      "AUTHENTICATION NOTE: No Supabase portfolio snapshot for this HTTP request (common for the cross-origin extension). Do not invent specific holdings, weights, or dollar amounts. Use reading context if present; otherwise give general beginner guidance.",
     );
   }
+  if (readingBlock) supplemental.push(readingBlock);
 
-  const ctx = body.context;
-  /** Floating web widget + extension both send page/snippet hints for grounding. */
-  const embedsReadingContext =
-    body.mode === "extension" || body.mode === "floating";
+  /** SSE on demand — extension defaults to buffered JSON (`stream` omitted); web floating widget sets `stream: true`. */
+  const useStream = body.stream === true;
+  const lastUserMsg = trimmed.filter((x) => x.role === "user").pop()?.content ?? "";
 
-  const pageBlock =
-    embedsReadingContext && ctx
-      ? [
-          "The user is reading a web page; use it to stay concrete and short (3–6 sentences unless they ask for more).",
-          `Title: ${ctx.title ?? "unknown"}`,
-          `URL: ${ctx.url ?? "unknown"}`,
-          ctx.excerpt ? `Excerpt: ${ctx.excerpt.slice(0, 1200)}` : "",
-          ctx.classified?.badgeLabel
-            ? `Topic hint: ${ctx.classified.badgeLabel}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n")
-      : "";
+  const invoke = {
+    groq: { apiKey: groqKey, model, temperature: 0.45, maxTokens: 900 },
+    supplementalSystemBlocks: supplemental.length ? supplemental : undefined,
+    demoFallbackPrompt: lastUserMsg,
+  };
 
-  const systemParts = [
-    "You are Kuber, a calm, beginner-friendly investing guide for InvestIQ. No hype, no jargon without a plain-English gloss. Prefer actionable clarity over disclaimers stuffing; one short caveat is enough when risk matters.",
-    pageBlock,
-  ].filter(Boolean);
-
-  const messages = [{ role: "system" as const, content: systemParts.join("\n\n") }, ...trimmed];
-
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${groqKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.45,
-        max_tokens: 900,
-      }),
-    });
-
-    if (!res.ok) {
-      const errTxt = await res.text();
-      return NextResponse.json(
-        {
-          message: `Groq error (${res.status}). Try again briefly. ${errTxt.slice(0, 280)}`,
-        },
-        { status: 502, headers: corsHeaders }
-      );
+  if (!useStream) {
+    let assembled = "";
+    for await (const part of chat(trimmed, kuberCore, invoke)) {
+      assembled += part;
     }
-
-    const data = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text =
-      data.choices?.[0]?.message?.content?.trim() ||
-      "I could not produce an answer.";
-
-    return NextResponse.json({ message: text }, { headers: corsHeaders });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Groq request failed.";
-    return NextResponse.json({ message: msg }, { status: 502, headers: corsHeaders });
+    const message = assembled.trim() || "Kuber returned empty.";
+    return Response.json({ message }, { headers: corsHeaders });
   }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const piece of chat(trimmed, kuberCore, invoke)) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ t: piece })}\n\n`));
+        }
+        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+        controller.close();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Groq stream failed.";
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      Connection: "keep-alive",
+    },
+  });
 }
