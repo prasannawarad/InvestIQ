@@ -22,11 +22,14 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.6.0"
   },
-  "manifest": {
+    "manifest": {
     "name": "InvestIQ",
     "description": "Kuber follows you across the web to answer money questions in context.",
-    "permissions": [
-      "activeTab"
+    "permissions": ["activeTab", "storage", "tabs"],
+    "host_permissions": [
+      "http://localhost:3000/*",
+      "http://127.0.0.1:3000/*",
+      "<all_urls>"
     ]
   }
 }

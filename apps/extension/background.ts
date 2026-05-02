@@ -1,7 +1,3 @@
-chrome.action.onClicked.addListener((tab) => {
-  if (!tab.id) return;
+/** Service worker: overlay is driven via `popup.tsx` + content script messages. No toolbar fallback. */
 
-  chrome.tabs.sendMessage(tab.id, { type: "INVESTIQ_TOGGLE_OVERLAY" }).catch(() => {
-    // The content script may be unavailable on restricted Chrome pages.
-  });
-});
+export {};
