@@ -10,8 +10,8 @@ The product helps non-savvy users track investments, understand risk, and rebala
 - **Extension** — Plasmo (Chrome MV3, React)
 - **LLM** — Groq (Llama 3.3 70B), OpenAI-compatible API
 - **Voice** — Browser Web Speech API for STT, ElevenLabs streaming for TTS (Daniel voice, `eleven_turbo_v2_5`)
-- **Auth** — Clerk
-- **Data** — Static JSON for the demo, no database
+- **Auth** — Supabase Auth (email/password + Google OAuth)
+- **Data** — Supabase Postgres seed data for primary app state + deterministic mock universe in engine for discovery ranking
 - **Deploy** — Netlify (web), unpacked Chrome extension (demo)
 
 ## Monorepo layout
@@ -34,9 +34,9 @@ investiq/
 
 | Person | Owns | Day 1 task |
 |---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Run `pnpm setup:web`, paste in Figma Make exported code, wire to `@investiq/data` for demo data |
-| 2 — Kuber | `packages/kuber`, /Kuber, /Kuber/scenario, /Kuber/rebalance, /Kuber/discover, chat UI, voice, floating Kuber widget | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
-| 3 — Engine | `packages/engine`, scenario math, rebalancing algorithm, fit-score | Implement `recommendRebalance()` and `simulateScenario('market-drop-20')` |
+| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | Run `pnpm setup:web`, paste in Figma Make exported code, wire to Supabase + shared tokens |
+| 2 — Kuber | `packages/kuber`, floating widget + extension chat, voice pipeline | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
+| 3 — Engine | `packages/engine`, scenario math, rebalancing algorithm, fit-score, discovery ranking | Implement deterministic `simulateScenario`, `recommendRebalance`, `computeFitScore`, `computeGoalImpact`, `generateMatches` |
 | 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Run `pnpm setup:extension`, scaffold Plasmo, get Kuber overlay rendering on apple.com / cnbc.com |
 
 ## Day 1 setup
@@ -53,14 +53,21 @@ pnpm setup:extension  # creates apps/extension (Plasmo)
 pnpm install
 
 # 4. Set env vars
-cp .env.example apps/web/.env.local
-# Person 2 fills in GROQ_API_KEY and ELEVENLABS_API_KEY
+cp apps/web/.env.example apps/web/.env
+# Person 1 sets Supabase keys
+# Person 2 sets GROQ + ELEVENLABS keys
 
 # 5. Run
 pnpm dev
 ```
 
-After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/web/src/app/*` and adapts imports to use `@investiq/ui` tokens and `@investiq/data` for fixtures. The Figma Make output IS the design system — don't redesign.
+After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/web/src/app/*` and adapts imports to use `@investiq/ui` tokens. Primary runtime data comes from Supabase (`02_supabase_seed_mock_data.sql`), while the engine keeps a fictional discovery universe for `/Kuber` match ranking.
+
+## Mock data usage (current)
+
+- **Supabase seed (`02_supabase_seed_mock_data.sql`)** is the canonical demo data source for profile, goals, portfolio, holdings, and market events.
+- **`packages/data/src/fixtures/*`** remain as schema contracts and fallback demo fixtures.
+- **`packages/engine/src/universe.ts`** is intentionally mock/fictional and used only for `generateMatches()` ranking on `/Kuber`.
 
 ## Integration checkpoints
 
@@ -76,6 +83,6 @@ See `DEMO.md` for the three-day Priya narrative. **Do not deviate from the scrip
 | Weight | Criterion | Where we score |
 |---|---|---|
 | 30% | UX & empathy | /home plain language, "I'm freaking out" button, /panic calm treatment, jargon translations |
-| 30% | Innovation in rebalancing | /Kuber/scenario flow with engine-computed projections, Kuber narration |
+| 30% | Innovation in rebalancing | /rebalance scenario flow with engine-computed projections, Kuber narration |
 | 20% | Transparency & trust | Receipt with tax cost, fees, goal impact; "Why" expansion on every trade card |
 | 20% | Technical execution | End-to-end working demo across web app + extension |

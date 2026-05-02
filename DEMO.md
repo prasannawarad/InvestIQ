@@ -53,8 +53,8 @@ Total runtime target: 5.5 minutes (30s intro + 4.5min demo + 30s outro).
 4. Page transitions to /panic — visibly calmer color treatment
 5. Sentence: "Take a breath. Most of the time, the right thing to do is nothing."
 6. Pick "Run a scenario"
-7. /Kuber/scenario picker — pick "What if the market drops 20%?"
-8. /Kuber/scenario/market-drop-20 loads
+7. /rebalance opens in Scenario mode. Use the scenario chips and pick "Market drop 20%"
+8. Scenario receipt + narration loads on /rebalance
 9. Kuber speaks: "Okay. Let's actually look at this. If the market dropped 20% from here, your portfolio would go from $22,300 to about $19,500..."
 10. Receipt below: house deposit timeline +4 months, retirement unchanged
 11. Kuber: "You're 65% in stocks against your 60% target. We can rebalance..."
@@ -74,6 +74,11 @@ Total runtime target: 5.5 minutes (30s intro + 4.5min demo + 30s outro).
 ## Demo-day rules
 
 - **Recorded backup video:** Person 4 owns this. Record the full flow the night before. If anything flakes live, switch to the recording.
-- **Lock the demo Chrome profile:** logged into Clerk as Priya, extension installed, all keys cached. Do not use it for anything else.
+- **Lock the demo Chrome profile:** logged into Supabase auth as Priya, extension installed, all keys cached. Do not use it for anything else.
 - **No live signups.** Anyone who asks "can I try it" gets the deck-and-recording, not the running app.
 - **No ad-libbing Kuber's responses live.** The three demo questions have curated responses. Off-script questions go to a "let me show you that after" deflection.
+
+## Data note for presenters
+
+- Runtime account data is loaded from Supabase seed (`02_supabase_seed_mock_data.sql`).
+- Discovery candidates in `/Kuber` come from a fictional deterministic universe (mock by design) to avoid real-stock recommendation risk in demo.

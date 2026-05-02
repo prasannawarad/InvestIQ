@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Play, Plus, Settings, X } from "lucide-react";
 import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
+import type { MatchCandidate } from "@investiq/engine";
 import { useAuth } from "../components/auth/AuthProvider";
 import { getDashboardData } from "../../lib/supabaseData";
+import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 
 type Status = "standby" | "running";
 
@@ -19,55 +21,20 @@ type Match = {
   why: string[];
 };
 
-const matches: Match[] = [
-  {
-    id: "m1",
-    name: "TechFin Holdings",
-    logo: "TF",
-    industry: "Technology",
-    size: "Big established",
-    location: "Domestic",
-    score: 91,
-    why: [
-      "Matches your balanced risk preference",
-      "Improves diversification in large-cap tech",
-      "Fits your 3+ year house goal horizon",
-    ],
-  },
-  {
-    id: "m2",
-    name: "Bharat Energy Ltd",
-    logo: "BE",
-    industry: "Energy",
-    size: "Medium growing",
-    location: "Domestic",
-    score: 84,
-    why: [
-      "Adds sector exposure you currently underweight",
-      "Moderate volatility for long-term growth",
-      "Works within your per-position cap",
-    ],
-  },
-  {
-    id: "m3",
-    name: "Atlas Consumer Fund",
-    logo: "AC",
-    industry: "Consumer",
-    size: "Big established",
-    location: "International",
-    score: 79,
-    why: [
-      "Defensive sector for drawdown protection",
-      "Diversifies away from concentrated equity funds",
-      "Complements your existing index exposure",
-    ],
-  },
-];
-
 function getFirstName(fullName: string | null | undefined): string {
   const name = fullName?.trim();
   if (!name) return "there";
   return name.split(/\s+/)[0] ?? "there";
+}
+
+function toDisplaySize(value: string): string {
+  if (value === "large") return "Big established";
+  if (value === "medium") return "Medium growing";
+  return "Early growth";
+}
+
+function toTitleCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 export default function KuberPage() {
@@ -79,6 +46,9 @@ export default function KuberPage() {
   const [budget, setBudget] = useState(500);
   const [profileName, setProfileName] = useState(getFirstName(user?.user_metadata?.full_name));
   const [equityShare, setEquityShare] = useState(65);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -99,6 +69,60 @@ export default function KuberPage() {
       mounted = false;
     };
   }, [user?.id]);
+
+  async function startDiscovery() {
+    if (!user?.id) return;
+    setStatus("running");
+    setMatchesLoading(true);
+    setMatchesError(null);
+
+    try {
+      const data = await getDashboardData(user.id);
+      const portfolio = mapDashboardToPortfolio(data);
+      const userProfile = mapDashboardToUserProfile(data);
+
+      const response = await fetch("/api/engine/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filters: {
+            money_to_invest: budget,
+            per_position_cap: Math.max(100, Math.round(budget / 3)),
+            industries: ["technology", "financials", "healthcare", "energy", "consumer"],
+            sizes: ["medium", "large"],
+            risk: userProfile.risk_profile.risk_tolerance,
+            asset_classes: ["equity", "debt", "gold"],
+            geography: ["domestic", "international"],
+            keywords: ["defensive", "diversified", "quality"],
+          },
+          userProfile,
+          portfolio,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate matches");
+      }
+
+      const json = (await response.json()) as { matches: MatchCandidate[] };
+      const mapped = json.matches.map((match) => ({
+        id: match.symbol,
+        name: match.name,
+        logo: match.logo,
+        industry: toTitleCase(match.industry),
+        size: toDisplaySize(match.size),
+        location: toTitleCase(match.location),
+        score: match.match_score,
+        why: match.why_match,
+      }));
+      setMatches(mapped);
+    } catch (err) {
+      setMatchesError(err instanceof Error ? err.message : "Failed to generate matches");
+      setMatches([]);
+    } finally {
+      setMatchesLoading(false);
+    }
+  }
 
   const used = useMemo(() => basket.reduce((sum, item) => sum + item.amount, 0), [basket]);
   const remaining = Math.max(0, budget - used);
@@ -130,7 +154,9 @@ export default function KuberPage() {
           </button>
           <button
             type="button"
-            onClick={() => setStatus("running")}
+            onClick={() => {
+              void startDiscovery();
+            }}
             className="flex items-center gap-2 px-4 py-2 text-sm"
             style={{ borderRadius: radii.md, backgroundColor: colors.cardBg, color: colors.accent }}
           >
@@ -206,6 +232,18 @@ export default function KuberPage() {
           {status === "standby" ? (
             <div className="py-20 text-center" style={{ color: colors.textMuted }}>
               Set your filters and click Start.
+            </div>
+          ) : matchesLoading ? (
+            <div className="py-20 text-center" style={{ color: colors.textMuted }}>
+              Generating matches...
+            </div>
+          ) : matchesError ? (
+            <div className="py-20 text-center" style={{ color: colors.coral }}>
+              {matchesError}
+            </div>
+          ) : matches.length === 0 ? (
+            <div className="py-20 text-center" style={{ color: colors.textMuted }}>
+              No matches for current filters.
             </div>
           ) : (
             <div className="space-y-6">
@@ -361,7 +399,7 @@ export default function KuberPage() {
                 type="button"
                 onClick={() => {
                   setShowFilters(false);
-                  setStatus("running");
+                  void startDiscovery();
                 }}
                 className="px-6 py-3 text-sm"
                 style={{ borderRadius: radii.md, color: colors.cardBg, backgroundColor: colors.accent }}

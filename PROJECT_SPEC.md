@@ -4,6 +4,10 @@ This document is the source of truth for what InvestIQ is, what it does, and how
 
 If something here conflicts with code in the repo, this document wins — update the code, not the spec, unless the team agrees to change direction.
 
+> Implementation note (May 2, 2026):
+> Current mainline implementation uses Supabase Auth + Supabase Postgres seed data (`02_supabase_seed_mock_data.sql`) as primary runtime data.
+> `packages/data/src/fixtures/*` remain contract/fallback fixtures, and `packages/engine/src/universe.ts` is intentionally fictional/mock for discovery ranking only.
+
 ---
 
 ## 1. Product
@@ -73,7 +77,7 @@ The agent's surfaces have non-overlapping responsibilities. Don't blur them.
 | `/current/[symbol]` | Single holding detail with "How this fits your portfolio" panel | Tap card on /current |
 | `/preview/[symbol]` | Preview a holding the user does NOT own. Match score, why-fits / why-not-fits | From /Kuber match card name (not the +Add button) |
 | `/rebalance?source=panic` | Rebalance with conservative bias | "I want to do something protective" on /panic |
-| `/rebalance?source=scenario&name=market-drop-20` | Rebalance after running a what-if | Scenario picker on /rebalance, or floating widget redirect |
+| `/rebalance?source=scenario&name=market-drop-20` | Rebalance after running a what-if | Scenario chips on /rebalance, or floating widget redirect |
 | `/panic` | Calm full-page takeover | "I'm freaking out" button (visible on /home and the floating widget) |
 
 ### 2.4 Navigation structure
@@ -358,19 +362,24 @@ The (i) tooltips have a "see full glossary →" link to /help.
 
 ## 4. Data
 
-### 4.1 Three core fixtures
+### 4.1 Runtime source + fixtures
 
-In `packages/data/src/fixtures/`. Loaded via `loadDemoData()` from `@investiq/data`.
+Primary runtime source: Supabase seeded data (`02_supabase_seed_mock_data.sql`), including:
+- profile + auth user
+- goals
+- portfolio + holdings
+- market context + events
 
-- `user_profile.json` — Priya's identity, financial context, risk profile, goals, preferences
-- `portfolio.json` — Holdings, current values, allocation, target allocation, drift, risk metrics
-- `market_context.json` — Today's market snapshot, macro context, recent events with `relevance_to_user` flag
+Contract/fallback fixtures in `packages/data/src/fixtures/`:
+- `user_profile.json`
+- `portfolio.json`
+- `market_context.json`
 
 Schemas in `packages/data/src/schemas.ts` are the contract. Update Zod first, then fixtures, then notify team.
 
 ### 4.2 Currency note
 
-Fixtures show INR amounts but the UI displays USD by relabeling (not converting). Demo-day shortcut. If asked: "this is demo data; production would ingest via Plaid."
+Current Supabase seed uses USD demo values for Priya. If asked: "this is demo data; production would ingest via brokerage + market feeds."
 
 ### 4.3 Key types (full Zod schemas in `packages/data/src/schemas.ts`)
 
@@ -480,7 +489,7 @@ Live Groq is the default; hardcoded is the fallback if Groq is slow.
 
 ### 7.1 Stack
 
-Next.js 16 App Router · TypeScript strict · Tailwind · shadcn/ui · Recharts · Clerk auth · Workspace deps (`@investiq/ui|data|engine|kuber`).
+Next.js 16 App Router · TypeScript strict · Tailwind · shadcn/ui · Recharts · Supabase auth · Workspace deps (`@investiq/ui|data|engine|kuber`).
 
 ### 7.2 API routes
 
@@ -493,12 +502,12 @@ Next.js 16 App Router · TypeScript strict · Tailwind · shadcn/ui · Recharts 
 | `/api/engine/scenario` | POST | Run a scenario, return ScenarioResult |
 | `/api/engine/rebalance` | POST | Generate rebalance recommendation |
 | `/api/engine/matches` | POST | Generate /Kuber matches based on filters |
-| `/api/portfolio` | GET | Current portfolio state (reads fixture) |
-| `/api/portfolio/commit` | POST | Commit basket from /Kuber to portfolio (in-memory) |
+| `/api/portfolio` | GET | Optional helper route for current portfolio state (implementation-specific; Supabase-backed in current build) |
+| `/api/portfolio/commit` | POST | Optional helper route for commit flow (implementation-specific) |
 
 ### 7.3 Auth
 
-Clerk with one preloaded demo user (Priya). New signups land on empty state. **For live demo, ONLY use the Priya account.**
+Supabase auth with one seeded demo user (Priya). Supports email/password and Google OAuth for the same seeded identity. **For live demo, ONLY use the Priya account.**
 
 ### 7.4 Floating Kuber widget
 
@@ -508,7 +517,7 @@ In `apps/web/src/components/FloatingKuber.tsx`, mounted in root layout. Hidden o
 
 Figma Make export IS the design system. Don't redesign. Person 1 pastes export into `apps/web/src/app/*` and adapts:
 - Replace inline hex codes with imports from `@investiq/ui/tokens`
-- Wire data from `@investiq/data` fixtures via `loadDemoData()`
+- Wire data from Supabase seed tables (and keep `@investiq/data` types/fixtures as fallback contracts)
 - Replace mock fetches with API route calls
 
 ---
@@ -572,7 +581,7 @@ Env vars on Netlify match `.env.example`. Person 2 sets keys; Person 1 deploys.
 
 ## 11. Constraints — what we are NOT building
 
-- No real database (static JSON fixtures only)
+- No production-grade brokerage database integration (we use seeded Supabase demo data)
 - No real brokerage integration (Plaid, etc.)
 - No multi-user real-time portfolios
 - No mobile native app
@@ -588,7 +597,7 @@ Env vars on Netlify match `.env.example`. Person 2 sets keys; Person 1 deploys.
 - No accessibility audit
 - No analytics
 
-If a judge asks "how would you scale?": Postgres + Prisma, Plaid, real expected-return model, multi-tenant Clerk org, mobile via Expo, full WCAG AA. Three-month roadmap.
+If a judge asks "how would you scale?": production Supabase/Postgres hardening or Prisma layer, Plaid, real expected-return model, multi-tenant auth, mobile via Expo, full WCAG AA. Three-month roadmap.
 
 ---
 
