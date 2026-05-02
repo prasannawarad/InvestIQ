@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { speak } from "@investiq/kuber";
 
 /** PNA (Chrome): extension on public HTTPS pages calling localhost requires this header. See chat route comment. */
 const corsHeaders = {
@@ -19,7 +20,7 @@ type Body = { text?: unknown };
 export async function POST(request: NextRequest) {
   const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
   const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
-  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_turbo_v2_5";
+  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim();
 
   if (!apiKey || !voiceId) {
     return NextResponse.json(
@@ -45,32 +46,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        Accept: "audio/mpeg",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: raw,
-        model_id: modelId,
-      }),
+    const audio = await speak(raw, {
+      apiKey,
+      voiceId,
+      modelId: modelId || "eleven_turbo_v2_5",
     });
-
-    if (!res.ok) {
-      const detail = await res.text();
-      return NextResponse.json(
-        {
-          message: `ElevenLabs returned ${res.status}. ${detail.slice(0, 400)}`,
-        },
-        { status: 502, headers: corsHeaders }
-      );
-    }
-
-    const buffer = await res.arrayBuffer();
-    return new NextResponse(buffer, {
+    return new NextResponse(audio as unknown as ReadableStream | Blob, {
       status: 200,
       headers: {
         ...corsHeaders,

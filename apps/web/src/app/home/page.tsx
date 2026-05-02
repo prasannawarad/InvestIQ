@@ -12,6 +12,7 @@ import { JourneyAreaChart } from "../components/investiq/JourneyAreaChart";
 import { KuberOrb } from "../components/investiq/KuberOrb";
 import { PortfolioStatDeck } from "../components/investiq/PortfolioStatDeck";
 import { useAuth } from "../components/auth/AuthProvider";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData, type HoldingRow } from "../../lib/supabaseData";
 
 const askKuberQuestions = [
@@ -96,7 +97,7 @@ export default function HomePage() {
       if (!user?.id) return;
 
       try {
-        const data = await getDashboardData(user.id);
+        const data = await getDashboardData(supabase, user.id);
         const summary = data.portfolio.summary as Record<string, number>;
         const dayChangePercent = Number(summary.day_change_percent ?? 0);
 

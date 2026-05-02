@@ -14,6 +14,7 @@ import { useAuth } from "../components/auth/AuthProvider";
 import { applyRebalanceCommit } from "../../lib/applyRebalanceCommit";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 import type { SupabaseDashboardData } from "../../lib/supabaseData";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData } from "../../lib/supabaseData";
 import { KuberOrb } from "../components/investiq/KuberOrb";
 import { ScenarioLiveSlider } from "../components/investiq/ScenarioLiveSlider";
@@ -153,6 +154,7 @@ function RebalancePageContent() {
   const [error, setError] = useState<string | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
+  const [groqNarration, setGroqNarration] = useState<string | null>(null);
 
   useEffect(() => {
     if (!searchParams.has("source") && !searchParams.has("name")) return;
@@ -190,7 +192,7 @@ function RebalancePageContent() {
       if (!user?.id) return;
 
       try {
-        const data = await getDashboardData(user.id);
+        const data = await getDashboardData(supabase, user.id);
         const portfolio = mapDashboardToPortfolio(data);
         const userProfile = mapDashboardToUserProfile(data);
         const source = sourceFromMode(mode);
@@ -281,6 +283,39 @@ function RebalancePageContent() {
     };
   }, [user?.id, mode, selectedScenario]);
 
+  /** Person 2: Groq re-phrases deterministic engine recommendation (portfolio context from cookies). */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function narrateFromApi() {
+      const rec = recommendationRef.current;
+      if (!model || !user?.id || !rec) {
+        setGroqNarration(null);
+        return;
+      }
+      setGroqNarration(null);
+      try {
+        const response = await fetch("/api/kuber/narrate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ recommendation: rec }),
+        });
+        const payload = (await response.json()) as { message?: string };
+        if (!cancelled && typeof payload.message === "string" && payload.message.trim()) {
+          setGroqNarration(payload.message.trim());
+        }
+      } catch {
+        if (!cancelled) setGroqNarration(null);
+      }
+    }
+
+    void narrateFromApi();
+    return () => {
+      cancelled = true;
+    };
+  }, [model, mode, selectedScenario, user?.id]);
+
   const narration = useMemo(() => {
     if (!model) return "Loading recommendation...";
     if (mode === "Scenario" && model.scenarioSummary) {
@@ -291,6 +326,8 @@ function RebalancePageContent() {
     }
     return `Your portfolio drifted from ${model.targetEquity}/${model.targetDebt} to ${model.currentEquity}/${model.currentDebt} stocks-to-debt. ${model.rationaleSummary}`;
   }, [mode, model]);
+
+  const narrationDisplay = groqNarration?.trim() ? groqNarration : narration;
 
   const hasTrades = (model?.trades.length ?? 0) > 0;
 
@@ -399,7 +436,7 @@ function RebalancePageContent() {
           <div className="flex items-start gap-4">
             <KuberOrb size="sm" className="-mt-2" />
             <p className="leading-relaxed" style={{ color: colors.text }}>
-              {narration}
+              {narrationDisplay}
             </p>
           </div>
           {mode === "Scenario" && model.scenarioProjectedTotal != null && model.scenarioName ? (

@@ -47,7 +47,7 @@ Tracked against the codebase (not optimism):
 | Person | Done in repo | Remaining |
 |---|---|---|
 | **1 — Shell** | `/home`, `/current`, `[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`, Supabase-backed dashboard flows, **`/extension` explainer page** (with Person 4) | **`/settings`:** Save must **persist** to Supabase; today the page loads prefs but **Save is not wired** (`apps/web/src/app/settings/page.tsx`). |
-| **2 — Kuber** | `packages/kuber`, floating widget, extension chat, Groq routes, ElevenLabs when keys exist | Optional spec polish: hide chips after thread starts; auto-navigate floating widget to `/rebalance` on scenario-like prompts (`PROJECT_SPEC` §2.4). |
+| **2 — Kuber** | **Shipped:** `packages/kuber` Groq streams + **`serialize-context`/`demo-responses`**, **`/api/kuber/chat`** (SSE + Supabase-backed session), **`/narrate`**, **`/jargon`**, **`/speak`**, floating chips hide + **`/rebalance` intent routing**, holding-detail jargon popovers, AI narration overlay on **`/rebalance`**. Requires **`GROQ_API_KEY`** (+ optional **`ELEVENLABS_*`**); Supabase **`NEXT_PUBLIC_*`** for portfolio context via `@supabase/ssr` cookies. |
 | **3 — Engine** | `packages/engine` + tests, `/api/engine/*`, `/rebalance` (drift / scenario / panic), receipt, **Confirm → Supabase**, query-param deep links, **“Why”** on trade rows | Optional: **streaming LLM** narration on `/rebalance` (deterministic copy + `KuberOrb` today). |
 | **4 — Extension** | Plasmo MV3 app, content script, popup, contextual chat posting to deployed API | **Process only:** own **`DEMO.md`** demo-day checklist — **recorded backup video**, locked demo Chrome profile, group practice, no live ad-lib Kuber. |
 

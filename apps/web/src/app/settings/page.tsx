@@ -5,6 +5,7 @@ import { colors, radii, typography } from "@investiq/ui/tokens";
 import { investiqFieldStyle } from "../../lib/investiqUi";
 import { InvestiqButton } from "../components/investiq/InvestiqButton";
 import { useAuth } from "../components/auth/AuthProvider";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData } from "../../lib/supabaseData";
 
 const toneOptions = ["Friendly and simple", "Direct and concise", "Detailed with explanations"] as const;
@@ -36,7 +37,7 @@ export default function SettingsPage() {
 
     async function init() {
       if (!user?.id) return;
-      const data = await getDashboardData(user.id);
+      const data = await getDashboardData(supabase, user.id);
       const prefs = data.profile.preferences as Record<string, string>;
       const riskProfile = data.profile.risk_profile as Record<string, number>;
       if (!mounted) return;

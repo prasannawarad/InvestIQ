@@ -13,6 +13,7 @@ import {
 } from "../../lib/investiqUi";
 import type { MatchCandidate } from "@investiq/engine";
 import { useAuth } from "../components/auth/AuthProvider";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData } from "../../lib/supabaseData";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 
@@ -63,7 +64,7 @@ export default function KuberPage() {
 
     async function init() {
       if (!user?.id) return;
-      const data = await getDashboardData(user.id);
+      const data = await getDashboardData(supabase, user.id);
       if (!mounted) return;
       const byAsset = (data.portfolio.allocation as Record<string, unknown>).by_asset_class as Record<string, number>;
       const monthlySavings = Number((data.profile.financial_context as Record<string, unknown>).monthly_savings_capacity ?? 500);
@@ -85,7 +86,7 @@ export default function KuberPage() {
     setMatchesError(null);
 
     try {
-      const data = await getDashboardData(user.id);
+      const data = await getDashboardData(supabase, user.id);
       const portfolio = mapDashboardToPortfolio(data);
       const userProfile = mapDashboardToUserProfile(data);
 

@@ -6,6 +6,7 @@ import { investiqTabStyle } from "../../lib/investiqUi";
 import { computeFitScore } from "@investiq/engine";
 import { HoldingCard } from "../components/HoldingCard";
 import { useAuth } from "../components/auth/AuthProvider";
+import { supabase } from "../../lib/supabase";
 import { getDashboardData } from "../../lib/supabaseData";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../lib/engineAdapter";
 
@@ -65,7 +66,7 @@ export default function CurrentPage() {
       if (!user?.id) return;
 
       try {
-        const data = await getDashboardData(user.id);
+        const data = await getDashboardData(supabase, user.id);
         const portfolio = mapDashboardToPortfolio(data);
         const userProfile = mapDashboardToUserProfile(data);
         const fitBySymbol = new Map(

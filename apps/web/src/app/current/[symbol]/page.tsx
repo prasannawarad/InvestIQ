@@ -8,6 +8,7 @@ import { colors, typography } from "@investiq/ui/tokens";
 import { investiqButtonStyle, investiqCardStyle } from "../../../lib/investiqUi";
 import { computeFitScore } from "@investiq/engine";
 import { useAuth } from "../../components/auth/AuthProvider";
+import { supabase } from "../../../lib/supabase";
 import { getDashboardData } from "../../../lib/supabaseData";
 import { mapDashboardToPortfolio, mapDashboardToUserProfile } from "../../../lib/engineAdapter";
 
@@ -33,6 +34,7 @@ export default function HoldingDetailPage() {
   const params = useParams<{ symbol: string }>();
   const symbol = String(params.symbol ?? "");
   const [activeInfo, setActiveInfo] = useState<StatKey | null>(null);
+  const [llmExplain, setLlmExplain] = useState<{ term: StatKey; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [model, setModel] = useState<{
     symbol: string;
@@ -53,7 +55,7 @@ export default function HoldingDetailPage() {
       if (!user?.id) return;
 
       try {
-        const data = await getDashboardData(user.id);
+        const data = await getDashboardData(supabase, user.id);
         const found = data.holdings.find((item) => item.symbol.toLowerCase() === symbol.toLowerCase());
         if (!found || !mounted) return;
         const portfolio = mapDashboardToPortfolio(data);
@@ -99,6 +101,47 @@ export default function HoldingDetailPage() {
     if (model.avgBuyPrice <= 0) return 0;
     return ((model.currentPrice - model.avgBuyPrice) / model.avgBuyPrice) * 100;
   }, [model]);
+
+  useEffect(() => {
+    const termStat = activeInfo;
+    const hold = model;
+    if (!termStat || !hold) {
+      setLlmExplain(null);
+      return;
+    }
+
+    const termKey: StatKey = termStat;
+    const { name: holdingName, symbol: holdingSymbol } = hold;
+    let cancelled = false;
+
+    async function jargonFetch() {
+      try {
+        const response = await fetch("/api/kuber/jargon", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            term: `${termKey} for ${holdingName} (${holdingSymbol})`,
+          }),
+        });
+        const payload = (await response.json()) as { message?: string };
+        const text =
+          typeof payload.message === "string" && payload.message.trim()
+            ? payload.message.trim()
+            : null;
+        if (!cancelled && text) {
+          setLlmExplain({ term: termKey, text });
+        }
+      } catch {
+        if (!cancelled) setLlmExplain(null);
+      }
+    }
+
+    void jargonFetch();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeInfo, model]);
 
   if (error) {
     return (
@@ -220,7 +263,9 @@ export default function HoldingDetailPage() {
                 <div style={{ color: colors.text }}>{row.value}</div>
                 {activeInfo === row.label ? (
                   <div className="mt-2 text-xs" style={{ color: colors.textMuted }}>
-                    {statDefinitions[row.label]}{" "}
+                    {(llmExplain?.term === row.label ? llmExplain.text : null) ??
+                      statDefinitions[row.label]}
+                    {" "}
                     <button
                       type="button"
                       style={{ color: colors.accent }}
