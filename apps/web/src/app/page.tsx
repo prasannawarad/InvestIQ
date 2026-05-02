@@ -6,6 +6,7 @@ import { investiqCardStyle, investiqFieldStyle } from "../lib/investiqUi";
 import { useAuth } from "./components/auth/AuthProvider";
 import { InvestiqButton } from "./components/investiq/InvestiqButton";
 import { DEMO_USER } from "../lib/demoUser";
+import { isLocalDemoMode } from "../lib/localDemo";
 
 export default function LoginPage() {
   const { signInWithGoogle, signInWithPassword, signUpWithPassword } = useAuth();
@@ -47,8 +48,13 @@ export default function LoginPage() {
           style={{ backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }}
         >
           <div className="mb-1" style={{ fontWeight: 600 }}>
-            Demo account (seeded in Supabase)
+            {isLocalDemoMode ? "Demo account (local fallback mode)" : "Demo account (seeded in Supabase)"}
           </div>
+          {isLocalDemoMode ? (
+            <div className="mb-2" style={{ color: colors.textMuted }}>
+              This local run is using the bundled demo portfolio because real Supabase credentials are not configured.
+            </div>
+          ) : null}
           <div>Email: {DEMO_USER.email}</div>
           <div>Password: {DEMO_USER.password}</div>
           <button
@@ -67,7 +73,7 @@ export default function LoginPage() {
         </div>
 
         <InvestiqButton variant="secondary" fullWidth className="mb-4" onClick={() => void signInWithGoogle()}>
-          Continue with Google
+          {isLocalDemoMode ? "Enter demo account" : "Continue with Google"}
         </InvestiqButton>
 
         <div className="mb-4 text-center text-xs" style={{ color: colors.textMuted }}>

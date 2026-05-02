@@ -18,6 +18,7 @@ import { colors, radii, shadows, typography } from "@investiq/ui/tokens";
 import { FLOATING_KUBER_VISIBILITY, type FloatingKuberVisibilityDetail } from "../../lib/floatingKuberEvents";
 import { KUBER_CUE_GROUPS, KUBER_EXTENSION_PAGE_CUES, readKuberChatResponse } from "@investiq/kuber";
 import { investiqFieldStyle, investiqFilterChipStyle } from "../../lib/investiqUi";
+import { useKuberVoice } from "../../lib/useKuberVoice";
 import { useAuth } from "./auth/AuthProvider";
 
 type ChatRow = { id: string; role: "kuber" | "user"; content: string };
@@ -109,9 +110,9 @@ export function FloatingKuber() {
   const [chatMessages, setChatMessages] = useState<ChatRow[]>([]);
   const [isSending, setIsSending] = useState(false);
   const chatRef = useRef<ChatRow[]>([]);
-  const speakTeardownRef = useRef<(() => void) | null>(null);
   const chatScrollAnchorRef = useRef<HTMLDivElement | null>(null);
   const firstName = getFirstName(user?.user_metadata?.full_name);
+  const { isSpeaking, speak: speakLine, stop: stopSpeakPlayback } = useKuberVoice();
 
   const overlayTransition = reduceMotion ? { duration: 0 } : panelTransition;
 
@@ -165,66 +166,9 @@ export function FloatingKuber() {
     return () => window.removeEventListener("investiq:open-kuber", onOpen as EventListener);
   }, []);
 
-  const stopSpeakPlayback = useCallback(() => {
-    window.speechSynthesis?.cancel();
-    speakTeardownRef.current?.();
-    speakTeardownRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    return () => stopSpeakPlayback();
-  }, [stopSpeakPlayback]);
-
   useEffect(() => {
     if (!isOpen) stopSpeakPlayback();
   }, [isOpen, stopSpeakPlayback]);
-
-  const speakLine = useCallback(async (spokenText: string) => {
-    if (typeof window === "undefined") return;
-    stopSpeakPlayback();
-    const clipped = spokenText.trim().slice(0, 4800);
-    if (!clipped) return;
-
-    try {
-      const abort =
-        typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-          ? AbortSignal.timeout(30_000)
-          : undefined;
-      const response = await fetch("/api/kuber/speak", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        ...(abort ? { signal: abort } : {}),
-        body: JSON.stringify({ text: clipped }),
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio();
-        audio.src = url;
-        const teardown = () => {
-          audio.pause();
-          URL.revokeObjectURL(url);
-          if (speakTeardownRef.current === teardown) speakTeardownRef.current = null;
-        };
-        audio.onended = teardown;
-        audio.onerror = teardown;
-        speakTeardownRef.current = teardown;
-        await audio.play().catch(teardown);
-        return;
-      }
-    } catch {
-      // fallback below
-    }
-
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    const utterance = new SpeechSynthesisUtterance(clipped);
-    utterance.rate = 1.02;
-    const voices = synth.getVoices?.() ?? [];
-    const voice = voices.find((v) => v.lang?.toLowerCase().startsWith("en")) ?? voices[0];
-    if (voice) utterance.voice = voice;
-    synth.speak(utterance);
-  }, [stopSpeakPlayback]);
 
   const submitChat = useCallback(
     async (trimmedPrompt: string) => {
@@ -518,9 +462,15 @@ export function FloatingKuber() {
                           borderColor: colors.border,
                         }}
                         aria-label="Speak last Kuber reply"
-                        title="Uses ElevenLabs when configured; otherwise browser voice"
+                        title={isSpeaking ? "Stop the active Kuber voice playback" : "Read the latest Kuber reply aloud"}
                         disabled={!lastKuberReply || isSending}
-                        onClick={() => lastKuberReply && void speakLine(lastKuberReply)}
+                        onClick={() => {
+                          if (isSpeaking) {
+                            stopSpeakPlayback();
+                            return;
+                          }
+                          if (lastKuberReply) void speakLine(lastKuberReply);
+                        }}
                       >
                         <Mic className="h-4 w-4" style={{ color: colors.accent }} />
                       </button>

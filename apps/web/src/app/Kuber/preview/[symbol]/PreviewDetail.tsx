@@ -3,7 +3,7 @@
 import type { Holding, UserProfile } from "@investiq/data";
 import type { UniverseCandidate } from "@investiq/engine";
 import { computeFitScore, getUniverseCandidateBySymbol } from "@investiq/engine";
-import { Info } from "lucide-react";
+import { Info, Volume2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { mapDashboardToUserProfile } from "../../../../lib/engineAdapter";
 import { supabase } from "../../../../lib/supabase";
 import { getDashboardData } from "../../../../lib/supabaseData";
 import { investiqButtonStyle, investiqCardStyle } from "../../../../lib/investiqUi";
+import { useKuberVoice } from "../../../../lib/useKuberVoice";
 import { useAuth } from "../../../components/auth/AuthProvider";
 
 type StatKey = "P/E ratio" | "Market cap" | "Dividend yield" | "Beta";
@@ -142,6 +143,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeInfo, setActiveInfo] = useState<StatKey | null>(null);
   const [llmExplain, setLlmExplain] = useState<{ term: StatKey; text: string } | null>(null);
+  const { isSpeaking, speak: speakKuberText, stop: stopKuberVoice } = useKuberVoice();
 
   useEffect(() => {
     let mounted = true;
@@ -383,6 +385,23 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
                   <div className="mt-2 text-xs" style={{ color: colors.textMuted }}>
                     {(llmExplain?.term === row.label ? llmExplain.text : null) ?? statDefinitions[row.label]}
                     {" "}
+                    {llmExplain?.term === row.label ? (
+                      <button
+                        type="button"
+                        className="mr-2 inline-flex items-center gap-1"
+                        style={{ color: colors.accent }}
+                        onClick={() => {
+                          if (isSpeaking) {
+                            stopKuberVoice();
+                            return;
+                          }
+                          void speakKuberText(llmExplain.text);
+                        }}
+                      >
+                        <Volume2 className="h-3.5 w-3.5" />
+                        {isSpeaking ? "Stop voice" : "Speak explanation"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       style={{ color: colors.accent }}
