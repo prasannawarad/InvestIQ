@@ -5,7 +5,7 @@ import type { UniverseCandidate } from "@investiq/engine";
 import { computeFitScore, getUniverseCandidateBySymbol } from "@investiq/engine";
 import { Info, Volume2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { colors, typography } from "@investiq/ui/tokens";
 import { mapDashboardToUserProfile } from "../../../../lib/engineAdapter";
@@ -180,13 +180,13 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
     const termStat = activeInfo;
     const holdName = candidate?.name;
     const holdSymbol = candidate?.symbol;
-    if (!termStat || !holdName || !holdSymbol) {
-      setLlmExplain(null);
-      return;
-    }
-    const termKey: StatKey = termStat;
     let cancelled = false;
     async function jargonFetch() {
+      if (!termStat || !holdName || !holdSymbol) {
+        if (!cancelled) setLlmExplain(null);
+        return;
+      }
+      const termKey: StatKey = termStat;
       try {
         const response = await fetch("/api/kuber/jargon", {
           method: "POST",
@@ -214,13 +214,13 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
 
   if (!candidate) {
     return (
-      <main className="ml-60 px-8 py-12">
+      <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
         <div className="mx-auto max-w-[1100px]">
           <Link href="/Kuber" className="text-sm" style={{ color: colors.textMuted }}>
             ← Back to discovery
           </Link>
           <p className="mt-6" style={{ color: colors.coral }}>
-            Unknown discovery code "{symbol.toUpperCase()}". Refresh matches from /Kuber.
+            Unknown discovery code &quot;{symbol.toUpperCase()}&quot;. Refresh matches from /Kuber.
           </p>
         </div>
       </main>
@@ -237,14 +237,14 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
   const scoreDisplay = fitScore != null ? `${fitScore}%` : "—";
 
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[1100px]">
         <Link href="/Kuber" className="text-sm" style={{ color: colors.textMuted }}>
           ← Back to discovery
         </Link>
 
-        <header className="mt-6 mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div className="flex gap-5">
+        <header className="mt-6 mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 gap-5">
             <div
               className="flex h-16 w-16 shrink-0 items-center justify-center text-lg font-semibold"
               style={{
@@ -256,7 +256,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             >
               {candidate.logo}
             </div>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-4xl" style={{ color: colors.text, fontFamily: typography.serif }}>
                 {candidate.name}
               </h1>
@@ -270,7 +270,7 @@ export default function PreviewDetail({ symbol }: { symbol: string }) {
             </div>
           </div>
 
-          <div className="min-w-[240px] p-5" style={investiqCardStyle()}>
+          <div className="w-full p-5 lg:min-w-[240px] lg:max-w-[360px]" style={investiqCardStyle()}>
             <div className="text-sm" style={{ color: colors.textMuted }}>
               Match score {Number.isFinite(queryScore) ? "(from grid)" : "(modeled)"}
             </div>

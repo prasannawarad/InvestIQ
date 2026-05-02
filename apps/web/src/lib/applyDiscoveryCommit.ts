@@ -119,7 +119,7 @@ export async function applyDiscoveryCommit(
   }
 
   const originals = new Map(data.holdings.map((h) => [h.id, { ...h }]));
-  let holdings = data.holdings.map((h) => ({ ...h }));
+  const holdings = data.holdings.map((h) => ({ ...h }));
 
   const nowIso = new Date().toISOString();
 

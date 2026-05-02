@@ -8,7 +8,7 @@ import PreviewDetail from "./PreviewDetail";
 
 function LoadingShell({ rawSymbol }: { rawSymbol: string }) {
   return (
-    <main className="ml-60 px-8 py-12">
+    <main className="px-4 py-10 sm:px-6 md:ml-60 md:px-8 md:py-12">
       <div className="mx-auto max-w-[1100px]">
         <Link href="/Kuber" className="text-sm" style={{ color: colors.textMuted }}>
           ← Back to discovery

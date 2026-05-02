@@ -1,103 +1,154 @@
 # InvestIQ
 
-Portfolio management for beginner investors. Goldman Sachs / UTD JSOM hackathon, May 2026.
+> AI-powered portfolio co-pilot for beginner investors — Goldman Sachs / UTD JSOM Hackathon, May 2026
 
-The product helps non-savvy users track investments, understand risk, and rebalance during uncertainty. **Kuber** is the AI agent throughout the app.
+InvestIQ helps people who aren't financial experts track their investments, understand risk in plain language, and act confidently during market uncertainty. The central agent, **Kuber**, surfaces across three touchpoints: a web dashboard, a floating chat widget, and a Chrome extension overlay on news and brokerage sites.
+
+---
+
+## Features
+
+- **Portfolio dashboard** — total value, day change, health score, journey chart with 1M/3M/YTD/1Y/All filters
+- **Holdings deep-dives** — fit scores (engine-computed, 0–100), jargon explainer panels with three levels of detail
+- **Rebalance flows** — drift correction, scenario modeling (market drops, inflation, job loss), and panic mode. All math is deterministic; Kuber narrates the recommendation.
+- **Discovery (`/Kuber`)** — filter by industry/size/risk and add new candidates to your basket; confirm persists to Supabase
+- **"I'm freaking out" button** — a separate calmer UI surface for market anxiety, links to scenario-driven rebalance
+- **Kuber chat widget** — streaming Groq response with portfolio context; ElevenLabs voice output
+- **Chrome extension** — contextual overlay on any page (CNBC, Moneycontrol, brokerage sites); posts to the same `/api/kuber/chat` endpoint
+
+---
 
 ## Stack
 
-- **Web app** — Next.js 16 (App Router) + TypeScript + Tailwind + shadcn/ui + Recharts
-- **UI polish layer** — `framer-motion` (motion, staggered dashboards, floating Kuber sheet) + `sonner` toasts themed to `@investiq/ui` CSS variables — same “component marketplace” vibe as curated registries without vendor lock-in; swap in pasted blocks from [21st.dev](https://21st.dev) anytime if you paste code that respects `tokens.ts`
-- **Extension** — Plasmo (Chrome MV3, React)
-- **LLM** — Groq (Llama 3.3 70B), OpenAI-compatible API
-- **Voice** — Browser Web Speech API for STT, ElevenLabs streaming for TTS (Daniel voice, `eleven_turbo_v2_5`)
-- **Auth** — Supabase Auth (email/password + Google OAuth)
-- **Data** — Supabase Postgres seed data for primary app state + deterministic mock universe in engine for discovery ranking
-- **Deploy** — Netlify (web), unpacked Chrome extension (demo)
+| Layer | Technology |
+|---|---|
+| Web app | Next.js 16 (App Router), React 19, TypeScript 5.6, Tailwind CSS 4 |
+| Animation | Framer Motion (web), CSS keyframes (extension shadow DOM) |
+| Extension | Plasmo (Chrome MV3), React |
+| LLM | Groq — Llama 3.3 70B via OpenAI-compatible API |
+| Voice | ElevenLabs streaming TTS (`eleven_turbo_v2_5`, Daniel voice) |
+| Auth & data | Supabase Auth + Postgres |
+| Monorepo | pnpm workspaces + Turbo |
+| Deploy | Netlify (web), unpacked Chrome extension (demo) |
 
-## Monorepo layout
+---
+
+## Monorepo Layout
 
 ```
 investiq/
 ├── apps/
-│   ├── web/         # Next.js web app — Person 1
-│   └── extension/   # Plasmo Chrome extension — Person 4
+│   ├── web/         # Next.js web app — main UI + API routes
+│   └── extension/   # Plasmo Chrome extension — contextual Kuber overlay
 ├── packages/
-│   ├── ui/          # Shared design tokens, components — Person 1
-│   ├── kuber/       # LLM prompts, Groq client, ElevenLabs client — Person 2
-│   ├── engine/      # Scenario + rebalance math (deterministic) — Person 3
-│   ├── data/        # Demo JSON + zod schemas — shared
-│   └── config/      # Shared tsconfig base — shared
+│   ├── ui/          # Design tokens (colors, typography, spacing) + shared components
+│   ├── kuber/       # Groq client, ElevenLabs client, system prompt, context serializer
+│   ├── engine/      # Deterministic portfolio math (scenarios, rebalance, fit scores)
+│   ├── data/        # Zod schemas + Priya demo fixtures (shared type contracts)
+│   └── config/      # Shared tsconfig base
 └── scripts/         # Setup helpers
 ```
 
-## Team ownership
+---
 
-| Person | Owns | Day 1 task |
-|---|---|---|
-| 1 — Shell | `apps/web`, `packages/ui`, /home, /current, /current/[symbol], /preview/[symbol], /panic, /settings, /profile | **`/settings` Save → Supabase** (tone, notifications, risk, voice flag). |
-| 2 — Kuber | `packages/kuber`, floating widget + extension chat, voice pipeline | Get Groq streaming working with portfolio JSON in context, then ElevenLabs streaming TTS |
-| 3 — Engine | `packages/engine`, **`/rebalance`** (drift / scenario / panic), engine API routes, Supabase commit on Confirm | **Shipped** in repo (optional: streaming LLM narration on `/rebalance`). |
-| 4 — Extension + Polish | `apps/extension`, demo flow integration, backup video | Extension shipped: draggable bubble + `KuberPanel`, `/extension` page, `/api/kuber/chat` (+ speak). **Remaining:** execute `DEMO.md` demo-day rules (backup recording, locked profile, dry runs). |
+## Local Setup
 
-## Implementation status (May 2026)
-
-Tracked against the codebase (not optimism):
-
-| Person | Done in repo | Remaining |
-|---|---|---|
-| **1 — Shell** | `/home`, `/current`, `[symbol]`, `/preview/[symbol]`, `/panic`, `/profile`, `/help`, **`/settings` Save → Supabase** (prefs JSON + risk_profile), **`/extension` explainer page** (with Person 4) | — |
-| **2 — Kuber** | **Shipped:** `packages/kuber` Groq streams + **`serialize-context`/`demo-responses`** (persona/tone lock-in in context), **system prompt** `kuber-agent-system.ts` (adapted from `agent/recommendation_agent.py`). **`/api/kuber/*`**, floating Kubers (also on **`/Kuber/preview/[symbol]`** for Ask-Kuber CTAs). **`/Kuber`** discovery → tap match → **`/Kuber/preview/[symbol]?score=`** research layout (mirror of `/current/[symbol]` mocks). Filters → **`POST /api/engine/matches`** → basket → **`Review & Confirm`** persists via `applyDiscoveryCommit`. Legacy **`/preview/[symbol]`** redirects to **`/Kuber/preview/...`**. **`GROQ_API_KEY`** + **`NEXT_PUBLIC_*`** Supabase cookies. |
-| **3 — Engine** | `packages/engine` + tests, `/api/engine/*`, `/rebalance` (drift / scenario / panic), receipt, **Confirm → Supabase**, query-param deep links, **“Why”** on trade rows | Optional: **streaming LLM** narration on `/rebalance` (deterministic copy + `KuberOrb` today). |
-| **4 — Extension** | Plasmo MV3 app, content script, popup, contextual chat posting to deployed API | **Process only:** own **`DEMO.md`** demo-day checklist — **recorded backup video**, locked demo Chrome profile, group practice, no live ad-lib Kuber. |
-
-## Day 1 setup
+**Prerequisites:** Node ≥20, pnpm ≥9
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/prasannawarad/InvestIQ.git investiq && cd investiq
-
-# 2. Bootstrap the apps
-pnpm setup:web        # creates apps/web (Next.js 16, Tailwind, shadcn-ready)
-pnpm setup:extension  # creates apps/extension (Plasmo)
-
-# 3. Install everything
+git clone https://github.com/prasannawarad/InvestIQ.git
+cd InvestIQ
 pnpm install
-
-# 4. Set env vars
 cp apps/web/.env.example apps/web/.env
-# Person 1 sets Supabase keys
-# Person 2 sets GROQ + ELEVENLABS keys
-
-# 5. Run
+# Fill in: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+#          GROQ_API_KEY, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 pnpm dev
 ```
 
-After `setup:web`, **Person 1 pastes the Figma Make exported code** into `apps/web/src/app/*` and adapts imports to use `@investiq/ui` tokens. Primary runtime data comes from Supabase (`02_supabase_seed_mock_data.sql`), while the engine keeps a fictional discovery universe for `/Kuber` match ranking.
+Web app runs on `http://localhost:3000`. Extension dev server on `:1012` (load unpacked from `apps/extension/build/chrome-mv3-dev` in `chrome://extensions`).
 
-## Mock data usage (current)
+Seed the demo database:
+```bash
+# Run 02_supabase_seed_mock_data.sql against your Supabase project
+# This creates Priya's $22,300 portfolio + market context
+```
 
-- **Supabase seed (`02_supabase_seed_mock_data.sql`)** is the canonical demo data source for profile, goals, portfolio, holdings, and market events.
-- **`/rebalance` → Confirm changes** updates the signed-in user’s **`portfolios`** and **`holdings`** rows in Supabase (same column contract as the seed). Re-run the seed SQL if you need to reset the demo portfolio.
-- **`packages/data/src/fixtures/*`** remain as schema contracts and fallback demo fixtures.
-- **`packages/engine/src/universe.ts`** is intentionally mock/fictional and used only for `generateMatches()` ranking on `/Kuber`.
+---
 
-## Integration checkpoints
+## Architecture
 
-- **End of Day 2:** Person 1's /home + Person 2's chat working together on a real Kuber question with Groq.
-- **End of Day 3:** Person 3's rebalance engine output flowing through Person 2's narrator into Person 4's /panic flow.
-- **Person 3 (engine + /rebalance):** Shipped in code; optional polish = streaming LLM narration on `/rebalance` (Person 2).
-- **Open gaps before judges:** Person 4 = **`DEMO.md`** execution (backup video + dry runs). See **Implementation status** table above.
+```
+Browser / Extension
+       │
+       ▼
+ apps/web (Next.js)
+  ├── /home         ← portfolio dashboard + Kuber chips
+  ├── /current      ← holdings grid (fit scores from engine)
+  ├── /current/[s]  ← holding detail + jargon panels
+  ├── /Kuber        ← discovery (filters → matches → confirm)
+  ├── /rebalance    ← drift/scenario/panic + receipt + Confirm
+  ├── /panic        ← calm market-uncertainty surface
+  └── /settings     ← tone, notifications, risk profile
+       │
+       ├── /api/kuber/*  ← Groq streaming + ElevenLabs TTS
+       └── /api/engine/* ← deterministic math (no LLM)
+                │
+     ┌──────────┴──────────┐
+     ▼                     ▼
+packages/kuber        packages/engine
+(Groq + ElevenLabs)   (rebalance, scenarios,
+                       fit scores — pure math)
+     │                     │
+     └──────────┬──────────┘
+                ▼
+         packages/data
+         (Zod schemas + Priya fixtures)
+                │
+                ▼
+           Supabase
+     (auth, profiles, portfolios,
+      holdings, market_events)
+```
 
-## Demo
+**Key design rules:**
+- Engine has zero LLM calls — all math is deterministic and unit-tested
+- Supabase writes happen only on explicit user Confirm actions
+- Three Kuber surfaces share one `/api/kuber/chat` endpoint but are architecturally separate — `/Kuber` is discovery only (no chat panel)
 
-See `DEMO.md` for the three-day Priya narrative. **Do not deviate from the script.** Every feature decision should be filtered through "does this serve the demo script?"
+---
 
-## Rubric we're solving for
+## Demo Persona
+
+All demo flows use **Priya Sharma** — a 38-year-old schoolteacher with a $22,300 portfolio and two goals: buying a house (3 years) and retirement (26 years). The narrative is scripted in `DEMO.md`.
+
+---
+
+## Design System
+
+All colors, fonts, and spacing live in `packages/ui/src/tokens.ts`:
+
+- **Accent:** Teal `#2dd4bf`
+- **Background:** Near-black `#06090f`
+- **Text:** Off-white `#e8eef6`
+- **Fonts:** DM Serif Display (headings) / Inter (body)
+- **Fit score:** Green ≥80, Amber 60–79, Coral <60
+
+---
+
+## Rubric
 
 | Weight | Criterion | Where we score |
 |---|---|---|
-| 30% | UX & empathy | /home plain language, "I'm freaking out" button, /panic calm treatment, jargon translations |
-| 30% | Innovation in rebalancing | /rebalance scenario flow with engine-computed projections, Kuber narration |
-| 20% | Transparency & trust | Receipt with tax cost, fees, goal impact; "Why" expansion on every trade card |
-| 20% | Technical execution | End-to-end working demo across web app + extension |
+| 30% | UX & empathy | Plain-language dashboard, "I'm freaking out" button, `/panic` calm surface, jargon translator |
+| 30% | Innovation in rebalancing | Engine-computed scenario projections, Kuber narration, goal-impact delta on every trade |
+| 20% | Transparency & trust | Receipt with tax cost + fees + goal impact, "Why" expansion on every trade card |
+| 20% | Technical execution | End-to-end demo across web app + Chrome extension |
+
+---
+
+## Docs
+
+- `CLAUDE.md` — Coding standards, architecture, and constraints for AI assistants
+- `CODEX.md` — 30-second pitch + quick onboarding
+- `PROJECT_SPEC.md` — Full product and API specification
+- `DEMO.md` — Word-for-word 5.5-minute demo script (Priya's 3-day narrative)
